@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.10/lib/p5.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.10/lib/addons/p5.sound.min.js"></script>
+    <title>544315616323</title>
+    <meta
+      name="description"
+      content="124543266123131203121321505443156163230435312453401541341621631"
+    />
+    <meta property="og:url" content="https://312.alimad.co/544315616323" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="544315616323" />
+    <meta
+      property="og:description"
+      content="124543266123131203121321505443156163230435312453401541341621631"
+    />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+            html,
+            body {
+              margin: 0;
+              padding: 0;
+            }
+            canvas {
+              display: block;
+              width: 100%;
+              height: auto;
+            }
+            body {
+              margin: 0;
+              background: #000;
+              font-family: Consolas, monospace;
+              overflow: hidden;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+            }
+
+            #ui {
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: calc(100% - 40px);
+        max-width: 1000px;
+        padding: 8px 10px;
+        background: rgba(0, 40, 0, 0.9);
+        color: #00ff90;
+        font-size: 14px;
+        border-top: 2px solid #00ff90;
+        text-shadow: 0 0 8px #00ff90;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .info {
+        flex: 1 1 auto;
+        min-width: 250px;
+      }
+
+            input[type="file"],
+            input[type="range"],
+            button {
+              margin: 4px 6px;
+            }
+
+            button {
+              background: black;
+              border: 1px solid #00ff90;
+              color: #00ff90;
+              padding: 4px 8px;
+              cursor: pointer;
+            }
+            button:hover {
+              background: #003300;
+            }
+            .help-wrap { position:relative; display:inline-block; margin-left:6px; }
+      .help-btn {
+        border:1px solid #00ff90;
+        padding:2px 6px;
+        cursor:pointer;
+        color:#00ff90;
+        background:#000;
+      }
+      .help-tip {
+        position:absolute;
+        left:50%; transform:translateX(-50%);
+        bottom:calc(100% + 10px);
+        background:#001a00;
+        color:#00ff90;
+        padding:6px 10px;
+        border:1px solid #00ff90;
+        border-radius:4px;
+        font-size:12px;
+        white-space:nowrap;
+        pointer-events:none;
+        opacity:0;
+        transition:opacity .1s ease;
+        text-shadow:0 0 6px #00ff90;
+      }
+      .help-wrap:hover .help-tip { opacity:1; }
+    </style>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <main></main>
+    <script>
+      let img;
+      let targetColor = [255,255,255];
+      let colorPicker, colorPreview;
+      let cols = 90,
+        rows = 4;
+      let cellx = 7,
+        celly = 7;
+      let cellvx = 0,
+        cellvy = 0;
+      let skew = 0,
+        skewv = 0;
+      let ox = 20,
+        oy = 20;
+      let oxv = 0,
+        oyv = 0;
+      let dragging = false;
+      let dragOffX = 0,
+        dragOffY = 0;
+      let threshold = 80;
+      let arr = [];
+      let o = "";
+
+      let uiDiv, slider, copyBtn, fileInput;
+
+      function setup() {
+        uiDiv = select("#ui");
+
+        fileInput = createFileInput(handleFile);
+        fileInput.parent(uiDiv);
+
+        slider = createSlider(0, 100, threshold);
+        slider.parent(uiDiv);
+        slider.input(() => (threshold = slider.value()));
+        colorPicker = createColorPicker('#ffffff');
+        colorPicker.parent(uiDiv);
+        colorPicker.input(()=>{
+          const c = colorPicker.color();
+          targetColor = [c.levels[0], c.levels[1], c.levels[2]];
+          colorPreview.style('background', colorPicker.value());
+        });
+        colorPreview = createDiv('');
+        colorPreview.parent(uiDiv);
+        colorPreview.style('width','20px');
+        colorPreview.style('height','20px');
+        colorPreview.style('display','inline-block');
+        colorPreview.style('margin-left','5px');
+        colorPreview.style('border','1px solid #333');
+        copyBtn = createButton("Copy");
+        copyBtn.parent(uiDiv);
+        copyBtn.mousePressed(() => navigator.clipboard.writeText(o));
+
+        textFont("Consolas");
+      }
+
+      function handleFile(file) {
+        if (file.type === "image") {
+          img = loadImage(file.data, () => {
+            if (window.canvas) window.canvas.remove();
+            window.canvas = createCanvas(img.width, img.height);
+            window.canvas.style("display:block;margin:0 auto;");
+            noSmooth();
+            centerCanvas();
+            ox = oy = 20;
+          });
+        }
+      }
+
+      function centerCanvas() {
+        window.canvas.position(
+          windowWidth / 2 - width / 2,
+          windowHeight / 2 - height / 2 - 80
+        );
+      }
+
+      function windowResized() {
+        if (img) centerCanvas();
+      }
+
+      function draw() {
+        if (!img) return;
+        ox += oxv;
+        oy += oyv;
+        cellx += cellvx;
+        celly += cellvy;
+        skew += skewv;
+        oxv *= 1.01;
+        oyv *= 1.01;
+        cellvx *= 1.01;
+        cellvy *= 1.01;
+        skewv *= 1.01;
+        if (frameCount % 3 == 0 && keyIsPressed) {
+          if (key == "]") cols++;
+          if (key == "[") cols--;
+        }
+        background(0);
+        image(img, 0, 0);
+        img.loadPixels();
+        drawDots();
+        drawBounds();
+        showUI();
+      }
+
+      function drawDots() {
+        noStroke();
+        arr = [];
+        o = "";
+        for (let i = 0; i < cols; i++) {
+          let p = [];
+          for (let j = 0; j < rows; j++) {
+            let x = floor(ox + i * cellx + cellx / 2 + cellx * j * skew);
+            let y = floor(oy + j * celly + celly / 2);
+            let avg = sampleLab(x, y);
+            let on = deltaE(avg, [255, 255, 255]) > threshold;
+            p.push(on ? 0 : 1);
+            fill(on ? 40 : 255);
+            circle(x, y, cellx * 0.5);
+          }
+          o +=
+            p[3] + p[1] + p[2] == 0 && p[0] == 1
+              ? "0"
+              : p[3] * 1 + p[2] * 2 + p[1] * 3 + p[0] * 4;
+          arr.push(p);
+        }
+      }
+
+      function drawBounds() {
+        stroke(0, 255, 0);
+        noFill();
+        rect(ox, oy, cols * cellx, rows * celly);
+      }
+
+      function showUI() {
+        uiDiv.html(
+          `ox:${ox.toFixed(1)} oy:${oy.toFixed(1)} ` +
+            `cellx:${cellx.toFixed(2)} celly:${celly.toFixed(2)} ` +
+            `skew:${skew.toFixed(2)} cols:${cols} rows:${rows} ` +
+            `threshold:${threshold}\n${o}\n${decrypt(o)}\n\n`
+        );
+        uiDiv.child(slider);
+        uiDiv.child(copyBtn);
+        uiDiv.child(colorPicker);
+      }
+
+      function keyPressed() {
+        if (key == "d" || keyCode == RIGHT_ARROW) oxv = 0.2;
+        if (key == "a" || keyCode == LEFT_ARROW) oxv = -0.2;
+        if (key == "w" || keyCode == UP_ARROW) oyv = -0.2;
+        if (key == "s" || keyCode == DOWN_ARROW) oyv = 0.2;
+        if (key == "q") cellvx = -0.001;
+        if (key == "e") cellvx = 0.001;
+        if (key == "z") cellvy = -0.01;
+        if (key == "c") cellvy = 0.01;
+        if (key == ",") skewv = -0.01;
+        if (key == ".") skewv = 0.01;
+      }
+
+      function keyReleased() {
+        if (!keyIsPressed) {
+          oxv = oyv = skewv = 0;
+          cellvx = cellvy = 0;
+        }
+      }
+
+      function mousePressed() {
+        if (
+          mouseX > ox &&
+          mouseX < ox + cols * cellx &&
+          mouseY > oy &&
+          mouseY < oy + rows * celly
+        ) {
+          dragging = true;
+          dragOffX = mouseX - ox;
+          dragOffY = mouseY - oy;
+        }
+      }
+      function mouseDragged() {
+        if (dragging) {
+          ox = mouseX - dragOffX;
+          oy = mouseY - dragOffY;
+        }
+      }
+      function mouseReleased() {
+        dragging = false;
+      }
+
+      function sampleLab(x, y) {
+        let r = 0,
+          g = 0,
+          b = 0,
+          n = 0;
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -1; dx <= 1; dx++) {
+            let px = x + dx,
+              py = y + dy;
+            if (px >= 0 && px < img.width && py >= 0 && py < img.height) {
+              let i = 4 * (py * img.width + px);
+              r += img.pixels[i];
+              g += img.pixels[i + 1];
+              b += img.pixels[i + 2];
+              n++;
+            }
+          }
+        return rgb2lab(r / n, g / n, b / n);
+      }
+
+      function rgb2lab(r, g, b) {
+        r /= 255;
+        g /= 255;
+        b /= 255;
+        r = r > 0.04045 ? pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
+        g = g > 0.04045 ? pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
+        b = b > 0.04045 ? pow((b + 0.055) / 1.055, 2.4) : b / 12.92;
+        let x = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047;
+        let y = r * 0.2126 + g * 0.7152 + b * 0.0722;
+        let z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883;
+        x = f(x);
+        y = f(y);
+        z = f(z);
+        return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+        function f(t) {
+          return t > 0.008856 ? pow(t, 1 / 3) : 7.787 * t + 16 / 116;
+        }
+      }
+
+      function deltaE(l1, rgb2) {
+        let [L1, a1, b1] = l1;
+        let [L2, a2, b2] = rgb2lab(...rgb2);
+        return sqrt((L1 - L2) ** 2 + (a1 - a2) ** 2 + (b1 - b2) ** 2);
+      }
+
+      const c = {
+        111: "A",
+        112: "B",
+        113: "C",
+        121: "D",
+        122: "E",
+        123: "F",
+        131: "G",
+        132: "H",
+        133: "I",
+        211: "J",
+        212: "K",
+        213: "L",
+        221: "M",
+        222: "N",
+        223: "O",
+        231: "P",
+        232: "Q",
+        233: "R",
+        311: "S",
+        312: "T",
+        313: "U",
+        321: "V",
+        322: "W",
+        323: "X",
+        331: "Y",
+        332: "Z",
+        333: "*",
+        0: " ",
+        117: ".",
+        227: "?",
+        337: "!",
+        127: ",",
+        217: "-",
+        237: ";",
+        317: ":",
+        711: "@",
+        712: "#",
+        713: "/",
+        721: "%",
+        722: "¤",
+        723: "\\",
+        171: "'",
+        272: '"',
+        373: "(",
+        811: "+",
+        812: "_",
+        813: "*",
+        821: "÷",
+        822: "=",
+        823: "^",
+      };
+
+      let cipher = c;
+
+      const newCipher = {
+        118: "0",
+        181: "1",
+        182: "2",
+        183: "3",
+        281: "4",
+        282: "5",
+        283: "6",
+        381: "7",
+        382: "8",
+        383: "9",
+      };
+
+      cipher = { ...c, ...newCipher };
+
+      function decrypt(input) {
+        let clean = input;
+
+        clean = clean
+          .replace(/4/g, "11")
+          .replace(/5/g, "22")
+          .replace(/6/g, "33");
+
+        const parts = clean.split(" ");
+        const outputs = [];
+
+        for (let i = 0; i < parts.length; i++) {
+          const x = parts[i];
+          let token = "",
+            out = "";
+          for (const ch of x) {
+            token += ch;
+            if (token == "791") {
+              out += token;
+              token = "";
+              out = out.replace(/791(.+)791/g, (_, hex) => {
+                console.log(hex);
+                try {
+                  return String.fromCodePoint(parseInt(hex, 16));
+                } catch {
+                  return `<span class='red'>${hex}</span>`;
+                }
+              });
+              continue;
+            }
+            if (token.length === 3 || token === "0") {
+              out += cipher[token] ?? `<span class='red'>${token}</span>`;
+              token = "";
+            } else if (!/[0-9]/.test(token)) {
+              out += `<span class='red'>${token}</span>`;
+              token = "";
+            }
+          }
+          if (token.length > 0) {
+            out += `<span class='red'>${token}</span>`;
+            token = "";
+          }
+          outputs.push(out);
+        }
+
+        return outputs.join(" ");
+      }
+      function unicodeToChar(unicodeHex) {
+        const hex = unicodeHex.replace(/^U\+/i, "");
+        const codePoint = parseInt(hex, 16);
+        return String.fromCodePoint(codePoint);
+      }
+    </script>
+    <div id="ui"></div>
+    <div class="help-wrap">
+      <div class="help-btn">Help</div>
+      <div class="help-tip">
+        WASD/Arrow keys to move<br />QE/ZC to scale<br />,. to skew<br />[] to
+        change count
+      </div>
+    </div>
+  </body>
+</html>
