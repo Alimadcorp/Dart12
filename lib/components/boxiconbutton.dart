@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 
-// Usage:
-// versionIcon(Icons.description, "V1")
-// versionIcon(Icons.description, "V2")
-
 class BoxIconButton extends StatefulWidget {
   final IconData icon;
-  final VoidCallback onTap;
+  final void Function(bool isToggled) onTap;
   final bool isToggleable;
   final bool initialToggleState;
   final double size;
@@ -57,10 +53,12 @@ class _BoxIconButtonState extends State<BoxIconButton> {
         if (!widget.isToggleable) setState(() => _isPressed = false);
       },
       onTap: () {
+        bool newToggleState = _isToggled;
         if (widget.isToggleable) {
-          setState(() => _isToggled = !_isToggled);
+          newToggleState = !_isToggled;
+          setState(() => _isToggled = newToggleState);
         }
-        widget.onTap();
+        widget.onTap(newToggleState);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),

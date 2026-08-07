@@ -1,4 +1,3 @@
-String decode(String input) {
-  if (input.isEmpty) return "Output";
+Future<String> decode(String input) async {
   return input;
 }

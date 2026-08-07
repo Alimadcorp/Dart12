@@ -1,4 +1,3 @@
-String encode(String input) {
-  if (input.isEmpty) return "Output";
+Future<String> encode(String input) async {
   return input;
 }
