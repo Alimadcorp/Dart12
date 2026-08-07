@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'settings.dart';
 import '../components/boxiconbutton.dart';
 import 'lib/encode.dart';
 import 'lib/decode.dart';
@@ -118,9 +119,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _settings() {
-    ScaffoldMessenger.of(
+    Navigator.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Settings clicked')));
+    ).push(MaterialPageRoute(builder: (context) => const SettingsPage()));
   }
 
   @override
