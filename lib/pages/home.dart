@@ -19,12 +19,16 @@ class _HomePageState extends State<HomePage> {
 
   String _output = "";
   bool _encryptMode = false;
-  bool _v1 = false;
   bool _isLoading = true;
+  bool _v1 = false;
+  bool _caseSensitivity = true;
+  String _unmatchedChar = 'as_is';
 
   static const String _keyInput = 'saved_input';
   static const String _keyEncryptMode = 'encrypt_mode';
   static const String _keyV1 = 'v1_mode';
+  static const String _keyCaseSensitivity = 'case_sens';
+  static const String _keyUnmatchedChar = 'unmatched_character';
 
   @override
   void initState() {
@@ -40,6 +44,8 @@ class _HomePageState extends State<HomePage> {
       _v1 = prefs.getBool(_keyV1) ?? false;
       _inputController.text = prefs.getString(_keyInput) ?? "";
       _isLoading = false;
+      _caseSensitivity = prefs.getBool(_keyCaseSensitivity) ?? false;
+      _unmatchedChar = prefs.getString(_keyUnmatchedChar) ?? 'as_is';
     });
     _processText();
   }
@@ -52,7 +58,16 @@ class _HomePageState extends State<HomePage> {
     }
 
     try {
-      final result = _encryptMode ? await encode(text) : await decode(text);
+      final result = _encryptMode
+          ? await encode(
+              text,
+              _v1 ? 1 : 2,
+              _caseSensitivity,
+              _unmatchedChar == "as_is"
+                  ? 0
+                  : (_unmatchedChar == "question_mark" ? 1 : 2),
+            )
+          : await decode(text, _v1 ? 1 : 2, _caseSensitivity);
 
       if (mounted && text == _inputController.text) {
         setState(() {
@@ -93,6 +108,12 @@ class _HomePageState extends State<HomePage> {
   void _swapVersion(bool isToggled) {
     setState(() => _v1 = isToggled);
     _saveBool(_keyV1, isToggled);
+    _processText();
+  }
+
+  void _toggleSens(bool isToggled) {
+    setState(() => _caseSensitivity = isToggled);
+    _saveBool(_keyCaseSensitivity, isToggled);
     _processText();
   }
 
@@ -158,6 +179,11 @@ class _HomePageState extends State<HomePage> {
                     alignLabelWithHint: true,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.zero),
+                      borderSide: BorderSide(color: outlineColor, width: 2.0),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.zero),
+                      borderSide: BorderSide(color: outlineColor, width: 2.0),
                     ),
                     hintText: "Input",
                     hintStyle: TextStyle(
@@ -227,6 +253,12 @@ class _HomePageState extends State<HomePage> {
                       BoxIconButton(icon: Icons.copy, onTap: (_) => _copy()),
                       BoxIconButton(icon: Icons.paste, onTap: (_) => _paste()),
                       BoxIconButton(icon: Icons.delete, onTap: (_) => _clear()),
+                      BoxIconButton(
+                        icon: Icons.text_fields,
+                        isToggleable: true,
+                        initialToggleState: _caseSensitivity,
+                        onTap: (isToggled) => _toggleSens(isToggled),
+                      ),
                       BoxIconButton(
                         icon: Icons.looks_one,
                         isToggleable: true,
