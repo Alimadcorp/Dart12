@@ -1,11 +1,11 @@
-import 'dart:ui';
-
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'settings.dart';
-import 'button.dart';
+import 'components/toolbar.dart';
+import 'components/output.dart';
 import 'lib/encode.dart';
 import 'lib/decode.dart';
 
@@ -16,27 +16,11 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class DesktopScrollBehavior extends MaterialScrollBehavior {
-  @override
-  Set<PointerDeviceKind> get dragDevices => {
-    PointerDeviceKind.touch,
-    PointerDeviceKind.mouse,
-    PointerDeviceKind.trackpad,
-  };
-
-  @override
-  Widget buildScrollbar(
-    BuildContext context,
-    Widget child,
-    ScrollableDetails details,
-  ) {
-    return Scrollbar(controller: details.controller, child: child);
-  }
-}
-
 class _HomePageState extends State<HomePage> {
   final TextEditingController _inputController = TextEditingController();
-
+  Timer? _debounceTimer;
+  String _lastProcessedText = "";
+  SharedPreferences? _prefs;
   String _output = "";
   bool _encryptMode = false;
   bool _isLoading = true;
@@ -58,16 +42,37 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadSavedData() async {
-    final prefs = await SharedPreferences.getInstance();
+    _prefs = await SharedPreferences.getInstance();
     setState(() {
-      _encryptMode = prefs.getBool(_keyEncryptMode) ?? false;
-      _v1 = prefs.getBool(_keyV1) ?? false;
-      _inputController.text = prefs.getString(_keyInput) ?? "";
+      _encryptMode = _prefs!.getBool(_keyEncryptMode) ?? false;
+      _v1 = _prefs!.getBool(_keyV1) ?? false;
+      _caseSensitivity = _prefs!.getBool(_keyCaseSensitivity) ?? false;
+      _unmatchedChar = _prefs!.getString(_keyUnmatchedChar) ?? 'as_is';
+
+      final savedText = _prefs!.getString(_keyInput) ?? "";
+      _inputController.text = savedText;
+      _lastProcessedText = savedText;
+
       _isLoading = false;
-      _caseSensitivity = prefs.getBool(_keyCaseSensitivity) ?? false;
-      _unmatchedChar = prefs.getString(_keyUnmatchedChar) ?? 'as_is';
     });
-    _processText();
+
+    if (_inputController.text.isNotEmpty) {
+      _processText();
+    }
+  }
+
+  void _onTextChanged() {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 759), () {
+      // yup its a truly random number
+      final currentText = _inputController.text;
+
+      if (currentText != _lastProcessedText) {
+        _lastProcessedText = currentText;
+        _processText();
+        _saveString(_keyInput, currentText);
+      }
+    });
   }
 
   Future<void> _processText() async {
@@ -90,9 +95,7 @@ class _HomePageState extends State<HomePage> {
           : await decode(text, _v1 ? 1 : 2, _caseSensitivity);
 
       if (mounted && text == _inputController.text) {
-        setState(() {
-          _output = result;
-        });
+        setState(() => _output = result);
       }
     } catch (e) {
       if (mounted && text == _inputController.text) {
@@ -104,19 +107,12 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _onTextChanged() {
-    _processText();
-    _saveString(_keyInput, _inputController.text);
+  void _saveString(String key, String value) {
+    _prefs?.setString(key, value);
   }
 
-  Future<void> _saveString(String key, String value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(key, value);
-  }
-
-  Future<void> _saveBool(String key, bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(key, value);
+  void _saveBool(String key, bool value) {
+    _prefs?.setBool(key, value);
   }
 
   void _changeMode(bool isToggled) {
@@ -139,8 +135,7 @@ class _HomePageState extends State<HomePage> {
 
   void _swap() {
     if (_output.isEmpty) return;
-    final temp = _output;
-    _inputController.text = temp;
+    _inputController.text = _output;
   }
 
   Future<void> _copy() async {
@@ -150,14 +145,10 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _paste() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
-    if (data != null && data.text != null) {
-      _inputController.text = data.text!;
-    }
+    if (data?.text != null) _inputController.text = data!.text!;
   }
 
-  void _clear() {
-    _inputController.clear();
-  }
+  void _clear() => _inputController.clear();
 
   void _settings() {
     Navigator.of(
@@ -167,18 +158,20 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _inputController.removeListener(_onTextChanged);
     _inputController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final outlineColor = theme.colorScheme.onSurfaceVariant;
-
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+
+    final theme = Theme.of(context);
+    final outlineColor = theme.colorScheme.onSurfaceVariant;
 
     return Scaffold(
       body: SafeArea(
@@ -198,110 +191,37 @@ class _HomePageState extends State<HomePage> {
                     labelText: "Input",
                     alignLabelWithHint: true,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.zero),
+                      borderRadius: BorderRadius.zero,
                       borderSide: BorderSide(color: outlineColor, width: 2.0),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.zero),
+                      borderRadius: BorderRadius.zero,
                       borderSide: BorderSide(color: outlineColor, width: 2.0),
                     ),
                     hintText: "Input",
-                    hintStyle: TextStyle(
-                      color: theme.colorScheme.onSurfaceVariant.withAlpha(100),
-                    ),
+                    hintStyle: TextStyle(color: outlineColor.withAlpha(100)),
                   ),
                 ),
               ),
-
               Expanded(
                 flex: 1,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12.0,
-                    vertical: 16.0,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.zero,
-                    border: Border(
-                      left: BorderSide(color: outlineColor, width: 2.0),
-                      right: BorderSide(color: outlineColor, width: 2.0),
-                      top: BorderSide.none,
-                      bottom: BorderSide(color: outlineColor, width: 2.0),
-                    ),
-                  ),
-                  child: SingleChildScrollView(
-                    child: SelectableText(
-                      _output.isEmpty
-                          ? (_encryptMode ? "Encoded output" : "Decoded output")
-                          : _output,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: _output.isEmpty
-                            ? theme.colorScheme.onSurfaceVariant.withAlpha(100)
-                            : theme.colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
+                child: OutputDisplay(
+                  output: _output,
+                  encryptMode: _encryptMode,
                 ),
               ),
-              Center(
-                child: ScrollConfiguration(
-                  behavior: DesktopScrollBehavior(),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const ClampingScrollPhysics(),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border(
-                              left: BorderSide(color: outlineColor, width: 2.0),
-                            ),
-                          ),
-                          child: BoxIconButton(
-                            icon: Icons.code_off,
-                            isToggleable: true,
-                            initialToggleState: _encryptMode,
-                            onTap: (isToggled) => _changeMode(isToggled),
-                          ),
-                        ),
-
-                        BoxIconButton(
-                          icon: Icons.swap_vert,
-                          onTap: (_) => _swap(),
-                        ),
-
-                        BoxIconButton(icon: Icons.copy, onTap: (_) => _copy()),
-                        BoxIconButton(
-                          icon: Icons.paste,
-                          onTap: (_) => _paste(),
-                        ),
-                        BoxIconButton(
-                          icon: Icons.delete,
-                          onTap: (_) => _clear(),
-                        ),
-                        BoxIconButton(
-                          icon: Icons.text_fields,
-                          isToggleable: true,
-                          initialToggleState: _caseSensitivity,
-                          onTap: (isToggled) => _toggleSens(isToggled),
-                        ),
-                        BoxIconButton(
-                          icon: Icons.looks_one,
-                          isToggleable: true,
-                          initialToggleState: _v1,
-                          onTap: (isToggled) => _swapVersion(isToggled),
-                        ),
-
-                        BoxIconButton(
-                          icon: Icons.settings,
-                          onTap: (_) => _settings(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              BottomToolbar(
+                encryptMode: _encryptMode,
+                caseSensitivity: _caseSensitivity,
+                v1: _v1,
+                onModeChanged: _changeMode,
+                onCaseSensChanged: _toggleSens,
+                onVersionChanged: _swapVersion,
+                onSwap: _swap,
+                onCopy: _copy,
+                onPaste: _paste,
+                onClear: _clear,
+                onSettings: _settings,
               ),
             ],
           ),
