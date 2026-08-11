@@ -104,6 +104,8 @@ function updateMaps() {
     Object.entries(cipher).map(([k, v]) => [v, k])
   );
 }
+
+
 function decrypt(input) {
   let clean = input;
 
