@@ -116,7 +116,7 @@ class _SettingsPageState extends State<SettingsPage> {
             title: const Text('Google Play Store'),
             trailing: const Icon(Icons.open_in_new, size: 18),
             onTap: () => _openUrl(
-              'https://play.google.com/store/apps/details?id=com.alimad.312',
+              'https://play.google.com/store/apps/details?id=com.alimad.dart12',
             ),
           ),
           ListTile(
