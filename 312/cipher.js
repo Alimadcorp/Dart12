@@ -318,7 +318,7 @@ function decryptWord(x, cipherFirst) {
   return { output: out, hasError: hasError };
 }
 
-function encrypt(text, forceCaseInsensitive = false) {
+function encrypt(input, forceCaseInsensitive = false) {
   let out = "";
   let bracketOpen = false;
 
@@ -340,8 +340,8 @@ function encrypt(text, forceCaseInsensitive = false) {
     let firstWordCaps = 0;
     let firstWordLetters = 0;
 
-    for (let i = startIdx; i < text.length; i++) {
-      const ch = text[i];
+    for (let i = startIdx; i < input.length; i++) {
+      const ch = input[i];
 
       if (isTerminator(ch)) {
         break;
@@ -372,31 +372,31 @@ function encrypt(text, forceCaseInsensitive = false) {
     }
 
     if (wordCount >= 2 && totalCaps === totalLetters && totalLetters > 0) {
-      for (let i = startIdx; i < text.length; i++) {
-        if (isTerminator(text[i])) {
+      for (let i = startIdx; i < input.length; i++) {
+        if (isTerminator(input[i])) {
           return { type: "sentence", length: i - startIdx };
         }
       }
-      return { type: "sentence", length: text.length - startIdx };
+      return { type: "sentence", length: input.length - startIdx };
     }
 
     if (firstWordCaps === firstWordLetters && firstWordLetters > 1) {
       if (firstWordEnd !== -1) {
         return { type: "word", length: firstWordEnd - startIdx };
       }
-      for (let i = startIdx; i < text.length; i++) {
-        if (text[i] === " " || isTerminator(text[i])) {
+      for (let i = startIdx; i < input.length; i++) {
+        if (input[i] === " " || isTerminator(input[i])) {
           return { type: "word", length: i - startIdx };
         }
       }
-      return { type: "word", length: text.length - startIdx };
+      return { type: "word", length: input.length - startIdx };
     }
 
     return { type: "none", length: 0 };
   };
 
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
 
     if (ch === "\n") {
       out += "00";
@@ -458,7 +458,7 @@ function encrypt(text, forceCaseInsensitive = false) {
         if (state.numbers === "o") out += "737";
         else out += "73";
         for (let j = i; j < i + pattern.length; j++) {
-          const sentCh = text[j];
+          const sentCh = input[j];
           if (sentCh === "\n") {
             out += "00";
             continue;
@@ -477,8 +477,8 @@ function encrypt(text, forceCaseInsensitive = false) {
         if (state.numbers === "o") out += "727";
         else out += "72";
         let wordProcessed = 0;
-        for (let j = i; j < text.length; j++) {
-          const wordCh = text[j];
+        for (let j = i; j < input.length; j++) {
+          const wordCh = input[j];
           if (wordCh === " " || isTerminator(wordCh)) break;
 
           const wordUp = wordCh.toUpperCase();
