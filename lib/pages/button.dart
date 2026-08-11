@@ -66,7 +66,7 @@ class _BoxIconButtonState extends State<BoxIconButton> {
         height: widget.size,
         decoration: BoxDecoration(
           color: currentColor,
-          borderRadius: BorderRadius.circular(2.0),
+          borderRadius: BorderRadius.zero,
           border: Border(
             left: BorderSide.none,
             right: BorderSide(color: outlineColor, width: 2.0),

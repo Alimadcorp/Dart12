@@ -1,9 +1,11 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'settings.dart';
-import '../components/boxiconbutton.dart';
+import 'button.dart';
 import 'lib/encode.dart';
 import 'lib/decode.dart';
 
@@ -12,6 +14,24 @@ class HomePage extends StatefulWidget {
 
   @override
   State<HomePage> createState() => _HomePageState();
+}
+
+class DesktopScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+  };
+
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return Scrollbar(controller: details.controller, child: child);
+  }
 }
 
 class _HomePageState extends State<HomePage> {
@@ -225,52 +245,61 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               Center(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const ClampingScrollPhysics(),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border(
-                            left: BorderSide(color: outlineColor, width: 2.0),
+                child: ScrollConfiguration(
+                  behavior: DesktopScrollBehavior(),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const ClampingScrollPhysics(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border(
+                              left: BorderSide(color: outlineColor, width: 2.0),
+                            ),
+                          ),
+                          child: BoxIconButton(
+                            icon: Icons.code_off,
+                            isToggleable: true,
+                            initialToggleState: _encryptMode,
+                            onTap: (isToggled) => _changeMode(isToggled),
                           ),
                         ),
-                        child: BoxIconButton(
-                          icon: Icons.code_off,
-                          isToggleable: true,
-                          initialToggleState: _encryptMode,
-                          onTap: (isToggled) => _changeMode(isToggled),
+
+                        BoxIconButton(
+                          icon: Icons.swap_vert,
+                          onTap: (_) => _swap(),
                         ),
-                      ),
 
-                      BoxIconButton(
-                        icon: Icons.swap_vert,
-                        onTap: (_) => _swap(),
-                      ),
+                        BoxIconButton(icon: Icons.copy, onTap: (_) => _copy()),
+                        BoxIconButton(
+                          icon: Icons.paste,
+                          onTap: (_) => _paste(),
+                        ),
+                        BoxIconButton(
+                          icon: Icons.delete,
+                          onTap: (_) => _clear(),
+                        ),
+                        BoxIconButton(
+                          icon: Icons.text_fields,
+                          isToggleable: true,
+                          initialToggleState: _caseSensitivity,
+                          onTap: (isToggled) => _toggleSens(isToggled),
+                        ),
+                        BoxIconButton(
+                          icon: Icons.looks_one,
+                          isToggleable: true,
+                          initialToggleState: _v1,
+                          onTap: (isToggled) => _swapVersion(isToggled),
+                        ),
 
-                      BoxIconButton(icon: Icons.copy, onTap: (_) => _copy()),
-                      BoxIconButton(icon: Icons.paste, onTap: (_) => _paste()),
-                      BoxIconButton(icon: Icons.delete, onTap: (_) => _clear()),
-                      BoxIconButton(
-                        icon: Icons.text_fields,
-                        isToggleable: true,
-                        initialToggleState: _caseSensitivity,
-                        onTap: (isToggled) => _toggleSens(isToggled),
-                      ),
-                      BoxIconButton(
-                        icon: Icons.looks_one,
-                        isToggleable: true,
-                        initialToggleState: _v1,
-                        onTap: (isToggled) => _swapVersion(isToggled),
-                      ),
-
-                      BoxIconButton(
-                        icon: Icons.settings,
-                        onTap: (_) => _settings(),
-                      ),
-                    ],
+                        BoxIconButton(
+                          icon: Icons.settings,
+                          onTap: (_) => _settings(),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
