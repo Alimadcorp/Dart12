@@ -28,7 +28,7 @@ String fromUnicode(String hex) {
 void writeOut(StringBuffer out, String ch, int version, int unmatched) {
   out.write(switch (unmatched) {
     1 => '?',
-    2 => encode(toUnicode(ch), version, false, 1),
+    2 => "791${encode(toUnicode(ch), version, false, 1)}791",
     _ => ch,
   });
 }

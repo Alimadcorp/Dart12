@@ -63,7 +63,7 @@ class _HomePageState extends State<HomePage> {
 
   void _onTextChanged() {
     if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 759), () {
+    _debounceTimer = Timer(const Duration(milliseconds: 100), () {
       // yup its a truly random number
       final currentText = _inputController.text;
 
@@ -84,7 +84,7 @@ class _HomePageState extends State<HomePage> {
 
     try {
       final result = _encryptMode
-          ? await encode(
+          ? encode(
               text,
               _v1 ? 1 : 2,
               _caseSensitivity,
@@ -92,7 +92,7 @@ class _HomePageState extends State<HomePage> {
                   ? 0
                   : (_unmatchedChar == "question_mark" ? 1 : 2),
             )
-          : await decode(text, _v1 ? 1 : 2, _caseSensitivity);
+          : decode(text, _v1 ? 1 : 2, _caseSensitivity);
 
       if (mounted && text == _inputController.text) {
         setState(() => _output = result);
@@ -150,10 +150,19 @@ class _HomePageState extends State<HomePage> {
 
   void _clear() => _inputController.clear();
 
-  void _settings() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => const SettingsPage()));
+  Future<void> _settings() async {
+    final oldUnmatched = _unmatchedChar;
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const SettingsPage()),
+    );
+    await _prefs?.reload();
+    final newUnmatched = _prefs?.getString(_keyUnmatchedChar) ?? 'as_is';
+    if (oldUnmatched != newUnmatched) {
+      setState(() {
+        _unmatchedChar = newUnmatched;
+      });
+      _processText();
+    }
   }
 
   @override
