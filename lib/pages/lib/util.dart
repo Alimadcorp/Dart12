@@ -1,5 +1,3 @@
-import 'encode.dart';
-
 // util functions
 bool isLetter(String ch) {
   if (ch.isEmpty) return false;
@@ -13,24 +11,16 @@ bool isTerminator(String ch) {
   return terminators.contains(ch);
 }
 
-String toUnicode(String ch) {
+String a2u(String ch) {
   if (ch.isEmpty) return "?"; // uhh
   final codePoint = ch.runes.first;
   return codePoint.toRadixString(16).toUpperCase();
 }
 
-String fromUnicode(String hex) {
+String u2a(String hex) {
   final cleanHex = hex.replaceFirst(RegExp(r'^U\+', caseSensitive: false), '');
   final codePoint = int.parse(cleanHex, radix: 16);
   return String.fromCharCode(codePoint);
-}
-
-void writeOut(StringBuffer out, String ch, int version, int unmatched) {
-  out.write(switch (unmatched) {
-    1 => '?',
-    2 => "791${encode(toUnicode(ch), version, false, 1)}791",
-    _ => ch,
-  });
 }
 
 String compress(String input) {
