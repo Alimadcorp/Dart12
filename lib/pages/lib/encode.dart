@@ -1,11 +1,9 @@
 import 'map.dart';
 import 'util.dart';
 
-String encode(
-  String input,
+String encode(String input,
   int version, // 1, 2
-  bool caseSensitive,
-  int unmatched, // 0: as-is, 1: ?, 2: unicode
+  bool caseSensitive, int unmatched, // 0: as-is, 1: ?, 2: unicode
 ) {
   final out = StringBuffer();
 
