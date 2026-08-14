@@ -11,9 +11,6 @@ String decode(String masterInput, int version, bool caseSensitive) {
 
   // split into sentences
   final List<String> inputs = masterInput.split(RegExp(r'\r?\n|00')).toList(); // split by double 0 or line break
-  
-  // ignore: avoid_print
-  print('mode: decode, masterInput: $masterInput, v: $version, case: $caseSensitive');
 
   String acc = ""; // accumulator
   int accL = 0; // accumulator length
