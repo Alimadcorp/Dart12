@@ -87,6 +87,20 @@ String decode(String masterInput, int version, bool caseSensitive) {
           } else {
             token = _cS ? cipher(nAcc, version) : cipher(nAcc, version)?.toLowerCase();
           }
+        } else if (version == 2) {
+          if (nAcc == 71) {
+            _cL = true; // capitalize next letter
+            token = null; acc = ""; accL = 0;
+            // setting token to null skips adding to out and doesnt reset _cL
+          } else if (nAcc == 72 || _cW) {
+            _cW = true; // still capital, but by word
+            token = null; acc = ""; accL = 0;
+          } else if (nAcc == 73) {
+            token = null; // this is a repeated 737, we ignore it... quite a rare case
+            acc = ""; accL = 0;
+          } else {
+            token = _cS ? cipher(nAcc, version) : cipher(nAcc, version)?.toLowerCase();
+          }
         } else {
           token = cipher(nAcc, version);
         }
