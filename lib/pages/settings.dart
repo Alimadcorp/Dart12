@@ -92,14 +92,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
           ListTile(
             leading: const Icon(Icons.code),
-            title: const Text('Web Repository'),
-            subtitle: const Text('Alimadcorp/312'),
-            trailing: const Icon(Icons.open_in_new, size: 18),
-            onTap: () => _openUrl('https://github.com/Alimadcorp/312'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.code),
-            title: const Text('Flutter Repository'),
+            title: const Text('Github Repository'),
             subtitle: const Text('Alimadcorp/dart12'),
             trailing: const Icon(Icons.open_in_new, size: 18),
             onTap: () => _openUrl('https://github.com/Alimadcorp/dart12'),

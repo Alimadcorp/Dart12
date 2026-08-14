@@ -12,7 +12,10 @@ String a2u(String ch) {
 
 String u2a(String hex) {
   final cleanHex = hex.replaceFirst(RegExp(r'^U\+', caseSensitive: false), '');
-  final codePoint = int.parse(cleanHex, radix: 16);
+  final codePoint = int.tryParse(cleanHex, radix: 16);
+  if (codePoint == null || codePoint < 0 || codePoint > 0x10FFFF) {
+    return "";
+  }
   return String.fromCharCode(codePoint);
 }
 

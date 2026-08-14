@@ -5,6 +5,11 @@ String decode(String masterInput, int version, bool caseSensitive) {
   
   final StringBuffer out = StringBuffer();
   masterInput = decompress(masterInput); // only place where decompression takes place
+
+  masterInput = masterInput.replaceAllMapped(RegExp(r'791(.*?)791'), (Match match) {
+    final String token = match.group(1) ?? "";
+    return u2a(decode(token, version, false));
+  }); // replace all unicode chars
   
   // if not case sensitive and version is 1, remove those characters...
   if(!caseSensitive && version == 1) masterInput = masterInput.replaceAll('717', '').replaceAll('727', '').replaceAll('737', ''); 
