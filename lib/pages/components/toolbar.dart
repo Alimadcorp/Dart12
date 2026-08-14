@@ -50,9 +50,10 @@ class BottomToolbar extends StatelessWidget {
                   ),
                 ),
                 child: BoxIconButton(
+                  key: ValueKey(encryptMode), // update on change
                   icon: Icons.code_off,
                   isToggleable: true,
-                  initialToggleState: encryptMode,
+                  toggled: encryptMode,
                   onTap: onModeChanged,
                 ),
               ),
@@ -63,13 +64,13 @@ class BottomToolbar extends StatelessWidget {
               BoxIconButton(
                 icon: Icons.text_fields,
                 isToggleable: true,
-                initialToggleState: caseSensitivity,
+                toggled: caseSensitivity,
                 onTap: onCaseSensChanged,
               ),
               BoxIconButton(
                 icon: Icons.looks_one,
                 isToggleable: true,
-                initialToggleState: v1,
+                toggled: v1,
                 onTap: onVersionChanged,
               ),
               BoxIconButton(icon: Icons.settings, onTap: (_) => onSettings()),

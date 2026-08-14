@@ -43,13 +43,16 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadSavedData() async {
     _prefs = await SharedPreferences.getInstance();
+    
     setState(() {
-      _encryptMode = _prefs!.getBool(_keyEncryptMode) ?? false;
-      _v1 = _prefs!.getBool(_keyV1) ?? false;
-      _caseSensitivity = _prefs!.getBool(_keyCaseSensitivity) ?? false;
-      _unmatchedChar = _prefs!.getString(_keyUnmatchedChar) ?? 'as_is';
+      _encryptMode = _prefs?.getBool(_keyEncryptMode) ?? false;
+      _v1 = _prefs?.getBool(_keyV1) ?? false;
+      final dynamic _r = _prefs?.get(_keyCaseSensitivity);
+      _caseSensitivity = (_r is bool) ? _r : true;
 
-      final savedText = _prefs!.getString(_keyInput) ?? "";
+      _unmatchedChar = _prefs?.getString(_keyUnmatchedChar) ?? 'as_is';
+
+      final savedText = _prefs?.getString(_keyInput) ?? "";
       _inputController.text = savedText;
       _lastProcessedText = savedText;
 
@@ -136,6 +139,7 @@ class _HomePageState extends State<HomePage> {
 
   void _swap() {
     if (_output.isEmpty) return;
+    _changeMode(!_encryptMode);
     _inputController.text = _output;
   }
 

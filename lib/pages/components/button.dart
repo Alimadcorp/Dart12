@@ -4,7 +4,7 @@ class BoxIconButton extends StatefulWidget {
   final IconData icon;
   final void Function(bool isToggled) onTap;
   final bool isToggleable;
-  final bool initialToggleState;
+  final bool toggled;
   final double size;
 
   const BoxIconButton({
@@ -12,7 +12,7 @@ class BoxIconButton extends StatefulWidget {
     required this.icon,
     required this.onTap,
     this.isToggleable = false,
-    this.initialToggleState = false,
+    this.toggled = false,
     this.size = 48.0,
   });
 
@@ -27,7 +27,15 @@ class _BoxIconButtonState extends State<BoxIconButton> {
   @override
   void initState() {
     super.initState();
-    _isToggled = widget.initialToggleState;
+    _isToggled = widget.toggled;
+  }
+
+  @override
+  void didUpdateWidget(covariant BoxIconButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.toggled != widget.toggled) {
+      _isToggled = widget.toggled;
+    }
   }
 
   @override
@@ -78,8 +86,8 @@ class _BoxIconButtonState extends State<BoxIconButton> {
           widget.icon == Icons.looks_one
               ? (_isToggled ? Icons.looks_one : Icons.looks_two)
               : (widget.icon == Icons.code_off
-                    ? (_isToggled ? Icons.code : Icons.code_off)
-                    : widget.icon),
+                  ? (_isToggled ? Icons.code : Icons.code_off)
+                  : widget.icon),
           color: currentIconColor,
           size: widget.size * 0.5,
         ),
