@@ -1,18 +1,6 @@
 import 'map.dart';
 import 'util.dart';
 
-// this entire substitiution cipher has 3-digit substitutions
-// except:
-// 0 is SPACE
-// version 1:
-// 00 is \n, 18 is 0
-
-// version 2:
-// 00 is \n, 71, 72, 73 are capitalizors
-
-// cipher() should only take upto a 3-digit number, hence we implement
-// a sliding window to keep length 3.
-
 String decode(String masterInput, int version, bool caseSensitive) {
   
   final StringBuffer out = StringBuffer();
