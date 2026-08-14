@@ -63,28 +63,28 @@ String decode(String masterInput, int version, bool caseSensitive) {
             _cL = true; // capitalize next letter
             token = null; acc = ""; accL = 0;
             // setting token to null skips adding to out and doesnt reset _cL
-          } else if (nAcc == 727 || _cW) {
+          } else if (nAcc == 727) {
             _cW = true; // still capital, but by word
             token = null; acc = ""; accL = 0;
           } else if (nAcc == 737) {
             token = null; // this is a repeated 737, we ignore it... quite a rare case
             acc = ""; accL = 0;
           } else {
-            token = _cS ? cipher(nAcc, version) : cipher(nAcc, version)?.toLowerCase();
+            token = cipher(nAcc, version);
           }
         } else if (version == 2) {
           if (nAcc == 71) {
             _cL = true; // capitalize next letter
             token = null; acc = ""; accL = 0;
             // setting token to null skips adding to out and doesnt reset _cL
-          } else if (nAcc == 72 || _cW) {
+          } else if (nAcc == 72) {
             _cW = true; // still capital, but by word
             token = null; acc = ""; accL = 0;
           } else if (nAcc == 73) {
             token = null; // this is a repeated 737, we ignore it... quite a rare case
             acc = ""; accL = 0;
           } else {
-            token = _cS ? cipher(nAcc, version) : cipher(nAcc, version)?.toLowerCase();
+            token = cipher(nAcc, version);
           }
         } else {
           token = cipher(nAcc, version);
@@ -94,7 +94,7 @@ String decode(String masterInput, int version, bool caseSensitive) {
       }
 
       if (token != null) {
-        out.write(caseSensitive ? (_cW ? token.toUpperCase() : (_cL ? token.toUpperCase() : token.toLowerCase())) : token);
+        out.write(caseSensitive ? _cS ? token.toUpperCase() : (_cW ? token.toUpperCase() : (_cL ? token.toUpperCase() : token.toLowerCase())) : token);
         acc = "";
         accL = 0;
         _cL = false;
