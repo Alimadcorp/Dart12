@@ -1,12 +1,105 @@
+import 'map.dart';
 import 'util.dart';
 
-String decode(String input, int version, bool caseSensitive) {
-  final out = StringBuffer();
-  input = decompress(input); // only place where decompression takes place
+// this entire substitiution cipher has 3-digit substitutions
+// except:
+// 0 is SPACE
+// version 1:
+// 00 is \n, 18 is 0
 
+// version 2:
+// 00 is \n, 71, 72, 73 are capitalizors
+
+// cipher() should only take upto a 3-digit number, hence we implement
+// a sliding window to keep length 3.
+
+String decode(String masterInput, int version, bool caseSensitive) {
+  
+  final StringBuffer out = StringBuffer();
+  masterInput = decompress(masterInput); // only place where decompression takes place
+  
+  // if not case sensitive and version is 1, remove those characters...
+  if(!caseSensitive && version == 1) masterInput = masterInput.replaceAll(RegExp(r'7[123]7'), ""); 
+
+  // split into sentences
+  final List<String> inputs = masterInput.split(RegExp(r'\r?\n|00')).toList(); // split by double 0 or line break
+  
   // ignore: avoid_print
-  print('mode: encode, input: $input, v: $version, case: $caseSensitive');
+  print('mode: decode, masterInput: $masterInput, v: $version, case: $caseSensitive');
 
+  String acc = ""; // accumulator
+  int accL = 0; // accumulator length
+  bool _cL = false, _cW = false; // capitalize by letter, word
+  for (int sentence = 0; sentence < inputs.length; sentence++) {
+    final String input;
+    final bool _cS; // capital sentence
+    if (caseSensitive && inputs[sentence].startsWith("73")) {
+      if (version == 2) {
+        _cS = true; input = inputs[sentence].substring(2, inputs[sentence].length);
+      } else if (version == 1 && inputs[sentence].startsWith("737")) {
+        _cS = true; input = inputs[sentence].substring(3, inputs[sentence].length);
+      } else { _cS = false; input = inputs[sentence]; }
+    } else {
+      _cS = false; input = inputs[sentence];
+    }
+
+    for (int i = 0; i < input.length; i++) {
+      acc += input[i]; accL++; // add the character to accumulator
+
+      if (!RegExp(r'\d').hasMatch(input[i])) { // if its not a digit,
+        out.write(acc); // add it as-is to output
+        acc = ""; // clear the accumulator
+        accL = 0;
+        continue; // skip rest of loop
+      }
+
+      if (input[i] == "0") { // if there is a space
+        out.write("$acc ".replaceAll("0", "")); // write accumulator followed by a space to output
+        _cW = false; // no longer capital by word as word has ended
+        acc = ""; // reset accumulator
+        accL = 0;
+        continue; // skip rest of loop
+      }
+      
+      if(accL == 4) { // if accumulator has a length of 4
+        out.write(acc[0]); // write the first character to output
+        acc = acc.substring(1, 4); // and then drop it
+        accL = 3; // update length, accumulator has a max length of 3
+      }
+
+      if (acc == "") { continue; } // in some cases this might occur
+
+      final int nAcc = int.parse(acc);
+      final String? token;
+
+      if (caseSensitive) {
+        if (version == 1) {
+          if (nAcc == 717) {
+            token = cipher(nAcc, version); // capitalize next letter
+          } else if (nAcc == 727 || _cW) {
+            token = cipher(nAcc, version); // still capital, but by word
+          } else if (nAcc == 737) {
+            token = ""; // this is a repeated 737, we ignore it...
+            // quite a rare case
+          } else {
+            token = _cS ? cipher(nAcc, version) : cipher(nAcc, version)?.toLowerCase();
+          }
+        } else {
+          token = cipher(nAcc, version);
+        }
+      } else {
+        token = cipher(nAcc, version); // these will be all upper...
+      }
+
+      if (token != null) {
+        out.write(token);
+        acc = "";
+        accL = 0;
+      }
+    }
+
+    out.write("\n"); // after each sentence write a line break
+  }
 
   return out.toString();
 }
