@@ -63,8 +63,10 @@ class _HomePageState extends State<HomePage> {
 
   void _onTextChanged() {
     if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 100), () {
-      // yup its a truly random number
+
+    // add a 200 ms delay if length is greater than 100 to improve performance while typin
+    final int duration =  _inputController.text.length > 100 ? 200 : 0; 
+    _debounceTimer = Timer(Duration(milliseconds: duration), () {
       final currentText = _inputController.text;
 
       if (currentText != _lastProcessedText) {
@@ -100,8 +102,7 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       if (mounted && text == _inputController.text) {
         setState(() {
-          _output =
-              "Error: Invalid input for ${_encryptMode ? 'encoding' : 'decoding'}";
+          _output = e.toString();
         });
       }
     }
