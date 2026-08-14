@@ -57,34 +57,28 @@ String decode(String masterInput, int version, bool caseSensitive) {
       final int nAcc = int.parse(acc);
       final String? token;
 
+
       if (caseSensitive) {
         if (version == 1) {
-          if (nAcc == 717) {
-            _cL = true; // capitalize next letter
-            token = null; acc = ""; accL = 0;
-            // setting token to null skips adding to out and doesnt reset _cL
-          } else if (nAcc == 727) {
-            _cW = true; // still capital, but by word
-            token = null; acc = ""; accL = 0;
-          } else if (nAcc == 737) {
-            token = null; // this is a repeated 737, we ignore it... quite a rare case
-            acc = ""; accL = 0;
-          } else {
-            token = cipher(nAcc, version);
+          switch (nAcc) {
+            case 717:
+              _cL = true; // capitalize next letter
+              // setting token to null skips adding to out and doesnt reset _cL
+              token = null; acc = ""; accL = 0; break;
+            case 727:
+              _cW = true; // still capital, but by word
+              token = null; acc = ""; accL = 0; break;
+            case 737:
+              token = null; // this is a repeated 737, we ignore it... quite a rare case
+              acc = ""; accL = 0; break;
+            default: token = cipher(nAcc, version);
           }
         } else if (version == 2) {
-          if (nAcc == 71) {
-            _cL = true; // capitalize next letter
-            token = null; acc = ""; accL = 0;
-            // setting token to null skips adding to out and doesnt reset _cL
-          } else if (nAcc == 72) {
-            _cW = true; // still capital, but by word
-            token = null; acc = ""; accL = 0;
-          } else if (nAcc == 73) {
-            token = null; // this is a repeated 737, we ignore it... quite a rare case
-            acc = ""; accL = 0;
-          } else {
-            token = cipher(nAcc, version);
+          switch (nAcc) {
+            case 73: token = null; acc = ""; accL = 0;
+            case 72: token = null; acc = ""; accL = 0; _cW = true; break;
+            case 71: token = null; acc = ""; accL = 0; _cL = true; break;
+            default: token = cipher(nAcc, version);
           }
         } else {
           token = cipher(nAcc, version);
