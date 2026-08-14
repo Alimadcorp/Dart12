@@ -22,7 +22,7 @@ class _HomePageState extends State<HomePage> {
   String _lastProcessedText = "";
   SharedPreferences? _prefs;
   String _output = "";
-  bool _encryptMode = false;
+  bool _encryptMode = true;
   bool _isLoading = true;
   bool _v1 = false;
   bool _caseSensitivity = true;
