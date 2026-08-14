@@ -7,12 +7,12 @@ String decode(String masterInput, int version, bool caseSensitive) {
   masterInput = decompress(masterInput); // only place where decompression takes place
   
   // if not case sensitive and version is 1, remove those characters...
-  if(!caseSensitive && version == 1) masterInput = masterInput.replaceAll(RegExp(r'7[123]7'), ""); 
+  if(!caseSensitive && version == 1) masterInput = masterInput.replaceAll('717', '').replaceAll('727', '').replaceAll('737', ''); 
 
   // split into sentences
-  final List<String> inputs = masterInput.split(RegExp(r'\r?\n|00')).toList(); // split by double 0 or line break
+  final List<String> inputs = masterInput.split(RegExp(r'\r?\n|00')); // split by double 0 or line break
 
-  String acc = ""; // accumulator
+  final StringBuffer acc = StringBuffer(); // accumulator
   int accL = 0; // accumulator length
   bool _cL = false, _cW = false; // capitalize by letter, word
   for (int sentence = 0; sentence < inputs.length; sentence++) {
@@ -20,41 +20,49 @@ String decode(String masterInput, int version, bool caseSensitive) {
     final bool _cS; // capital sentence
     if (caseSensitive && inputs[sentence].startsWith("73")) {
       if (version == 2) {
-        _cS = true; input = inputs[sentence].substring(2, inputs[sentence].length);
+        _cS = true; input = inputs[sentence].substring(2);
       } else if (version == 1 && inputs[sentence].startsWith("737")) {
-        _cS = true; input = inputs[sentence].substring(3, inputs[sentence].length);
+        _cS = true; input = inputs[sentence].substring(3);
       } else { _cS = false; input = inputs[sentence]; }
     } else {
       _cS = false; input = inputs[sentence];
     }
 
     for (int i = 0; i < input.length; i++) {
-      acc += input[i]; accL++; // add the character to accumulator
+      final String char = input[i];
+      final int codeUnit = char.codeUnitAt(0);
 
-      if (!RegExp(r'\d').hasMatch(input[i])) { // if its not a digit,
-        out.write(acc); // add it as-is to output
-        acc = ""; // clear the accumulator
+      acc.write(char); accL++; // add the character to accumulator
+
+      if (codeUnit < 48 || codeUnit > 57) { // if its not a digit,
+        out.write(acc.toString()); // add it as-is to output
+        acc.clear(); // clear the accumulator
         accL = 0;
         continue; // skip rest of loop
       }
 
-      if (input[i] == "0") { // if there is a space
-        out.write("$acc ".replaceAll("0", "")); // write accumulator followed by a space to output
+      if (char == "0") { // if there is a space
+        final String accStr = acc.toString();
+        out.write(accStr.substring(0, accStr.length - 1));
+        out.write(' '); // write accumulator followed by a space to output
         _cW = false; // no longer capital by word as word has ended
-        acc = ""; // reset accumulator
+        acc.clear(); // reset accumulator
         accL = 0;
         continue; // skip rest of loop
       }
       
       if(accL == 4) { // if accumulator has a length of 4
-        out.write(acc[0]); // write the first character to output
-        acc = acc.substring(1, 4); // and then drop it
+        final String accStr = acc.toString();
+        out.write(accStr[0]); // write the first character to output
+        acc.clear();
+        acc.write(accStr.substring(1, 4)); // and then drop it
         accL = 3; // update length, accumulator has a max length of 3
       }
 
-      if (acc == "") { continue; } // in some cases this might occur
+      if (accL == 0) { continue; } // in some cases this might occur
 
-      final int nAcc = int.parse(acc);
+      final String accStr = acc.toString();
+      final int? nAcc = int.tryParse(accStr);
       final String? token;
 
 
@@ -64,32 +72,33 @@ String decode(String masterInput, int version, bool caseSensitive) {
             case 717:
               _cL = true; // capitalize next letter
               // setting token to null skips adding to out and doesnt reset _cL
-              token = null; acc = ""; accL = 0; break;
+              token = null; acc.clear(); accL = 0; break;
             case 727:
               _cW = true; // still capital, but by word
-              token = null; acc = ""; accL = 0; break;
+              token = null; acc.clear(); accL = 0; break;
             case 737:
               token = null; // this is a repeated 737, we ignore it... quite a rare case
-              acc = ""; accL = 0; break;
-            default: token = cipher(nAcc, version);
+              acc.clear(); accL = 0; break;
+            default: token = nAcc != null ? cipher(nAcc, version) : null;
           }
         } else if (version == 2) {
           switch (nAcc) {
-            case 73: token = null; acc = ""; accL = 0;
-            case 72: token = null; acc = ""; accL = 0; _cW = true; break;
-            case 71: token = null; acc = ""; accL = 0; _cL = true; break;
-            default: token = cipher(nAcc, version);
+            case 73: token = null; acc.clear(); accL = 0;
+            case 72: token = null; acc.clear(); accL = 0; _cW = true; break;
+            case 71: token = null; acc.clear(); accL = 0; _cL = true; break;
+            default: token = nAcc != null ? cipher(nAcc, version) : null;
           }
         } else {
-          token = cipher(nAcc, version);
+          token = nAcc != null ? cipher(nAcc, version) : null;
         }
       } else {
-        token = cipher(nAcc, version); // these will be all upper...
+        token = nAcc != null ? cipher(nAcc, version) : null; // these will be all upper...
       }
 
       if (token != null) {
-        out.write(caseSensitive ? _cS ? token.toUpperCase() : (_cW ? token.toUpperCase() : (_cL ? token.toUpperCase() : token.toLowerCase())) : token);
-        acc = "";
+        final bool isUpper = caseSensitive ? (_cS || _cW || _cL) : false;
+        out.write(caseSensitive ? (isUpper ? token.toUpperCase() : token.toLowerCase()) : token);
+        acc.clear();
         accL = 0;
         _cL = false;
       }
