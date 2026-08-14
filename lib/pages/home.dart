@@ -45,7 +45,7 @@ class _HomePageState extends State<HomePage> {
     _prefs = await SharedPreferences.getInstance();
     
     setState(() {
-      _encryptMode = _prefs?.getBool(_keyEncryptMode) ?? false;
+      _encryptMode = _prefs?.getBool(_keyEncryptMode) ?? true;
       _v1 = _prefs?.getBool(_keyV1) ?? false;
       final dynamic _r = _prefs?.get(_keyCaseSensitivity);
       _caseSensitivity = (_r is bool) ? _r : true;
