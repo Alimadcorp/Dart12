@@ -139,8 +139,13 @@ class _HomePageState extends State<HomePage> {
 
   void _swap() {
     if (_output.isEmpty) return;
-    _changeMode(!_encryptMode);
-    _inputController.text = _output;
+    _debounceTimer?.cancel();
+    final newText = _output;
+    _encryptMode = !_encryptMode;
+    _saveBool(_keyEncryptMode, _encryptMode);
+    _lastProcessedText = newText;
+    _inputController.text = newText;
+    _processText();
   }
 
   Future<void> _copy() async {

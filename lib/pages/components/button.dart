@@ -21,22 +21,7 @@ class BoxIconButton extends StatefulWidget {
 }
 
 class _BoxIconButtonState extends State<BoxIconButton> {
-  late bool _isToggled;
   bool _isPressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _isToggled = widget.toggled;
-  }
-
-  @override
-  void didUpdateWidget(covariant BoxIconButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.toggled != widget.toggled) {
-      _isToggled = widget.toggled;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +30,7 @@ class _BoxIconButtonState extends State<BoxIconButton> {
     final primaryColor = theme.colorScheme.primary;
     final backgroundColor = theme.colorScheme.surface;
 
-    final bool isActive = widget.isToggleable ? _isToggled : _isPressed;
+    final bool isActive = widget.isToggleable ? widget.toggled : _isPressed;
 
     final currentColor = isActive ? primaryColor : backgroundColor;
     final currentIconColor = isActive ? backgroundColor : primaryColor;
@@ -61,12 +46,7 @@ class _BoxIconButtonState extends State<BoxIconButton> {
         if (!widget.isToggleable) setState(() => _isPressed = false);
       },
       onTap: () {
-        bool newToggleState = _isToggled;
-        if (widget.isToggleable) {
-          newToggleState = !_isToggled;
-          setState(() => _isToggled = newToggleState);
-        }
-        widget.onTap(newToggleState);
+        widget.onTap(!widget.toggled);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
@@ -84,9 +64,9 @@ class _BoxIconButtonState extends State<BoxIconButton> {
         ),
         child: Icon(
           widget.icon == Icons.looks_one
-              ? (_isToggled ? Icons.looks_one : Icons.looks_two)
+              ? (widget.toggled ? Icons.looks_one : Icons.looks_two)
               : (widget.icon == Icons.code_off
-                  ? (_isToggled ? Icons.code : Icons.code_off)
+                  ? (widget.toggled ? Icons.code : Icons.code_off)
                   : widget.icon),
           color: currentIconColor,
           size: widget.size * 0.5,

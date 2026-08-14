@@ -8,5 +8,5 @@ String decode(String input, int version, bool caseSensitive) {
   print('mode: encode, input: $input, v: $version, case: $caseSensitive');
 
 
-  return input;
+  return out.toString();
 }
