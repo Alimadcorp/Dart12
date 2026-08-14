@@ -105,217 +105,93 @@ function updateMaps() {
   );
 }
 
-
 function decrypt(input) {
-  let clean = input;
-
-  clean = clean
-    .replace(/4/g, "11")
-    .replace(/5/g, "22")
-    .replace(/6/g, "33");
-
-  // Global Unicode extraction (Prioritized Pass)
-  const isN = state.numbers != "o";
-  const currentCipher = isN ? { ...c, ...newCipher } : { ...c, ...oldCipher };
-  clean = clean.replace(/791(.*?)791/g, (match, content) => {
-    let hex = "";
-    let t = "";
-    for (let i = 0; i < content.length; i++) {
-      t += content[i];
-      if (t.length === 3 || t === "0" || (!isN && t === "18")) {
-        let char = currentCipher[t];
-        if (char) hex += char;
-        t = "";
-      } else if (t.length > 3) {
-        t = "";
-      }
-    }
-    if (!hex) return "";
-    try {
-      return `<span class='blue'>${String.fromCodePoint(parseInt(hex, 16))}</span>`;
-    } catch (e) {
-      return `<span class='red'>${hex}</span>`;
-    }
-  });
-
-  const parts = clean.split(" ");
-  const outputs = [];
-
-  for (let i = 0; i < parts.length; i++) {
-    const x = parts[i];
-    if (!x) continue;
-    let result = decryptWord(x, state.capitalization === "cipher");
-
-    if (result.hasError) {
-      let altResult = decryptWord(x, state.capitalization !== "cipher");
-      if (!altResult.hasError) {
-        result = altResult;
-      }
-    }
-
-    outputs.push(result.output);
-  }
-
-  return outputs.join(" ");
-}
-
-function decryptWord(x, cipherFirst) {
-  let out = "";
-  let hasError = false;
-  let capNext = false;
-  let capWord = false;
-  let capSentence = false;
-  let bracketOpen = false;
-
-  let token = "";
-
-  for (let j = 0; j < x.length; j++) {
-    const char = x[j];
-
-    // Pass through HTML and pre-decoded Unicode characters
-    if (!/[0-9]/.test(char)) {
-      out += char;
-      if ([".", ",", "!", "?", " ", "\n", "\r"].includes(char)) {
-        capSentence = false;
-        capWord = false;
-      }
-      if (char === " ") capWord = false;
-      continue;
-    }
-
-    token += char;
-
-    const nextChar = x[j + 1];
-    const next2Char = x[j + 2];
-
-    let codeType = 0;
-    const isN = state.numbers != "o";
-
-    if (cipherFirst) {
-      if (token === "711" || token === "712" || token === "713" || token === "171") {
-        let inc = cipher[token];
-        if (inc) {
-          out += inc;
-          token = "";
-          continue;
-        }
-      }
-      if (token === "71" && ["1", "2", "3"].includes(nextChar)) continue;
-      if (token === "7" && nextChar === "1" && ["1", "2", "3"].includes(next2Char)) continue;
-      if (token === "17" && nextChar === "1") continue;
-      if (token === "1" && nextChar === "7" && next2Char === "1") continue;
-
-      const isAtWordStart = (j - token.length + 1 === 0) || (out.length === 0) ||
-        [" ", "\n", ".", "!", "?", ",", ";", ":", "("].includes(out[out.length - 1]);
-
-      if (isAtWordStart) {
-        if (isN) {
-          if (token === "71") codeType = 1;
-          else if (token === "72") codeType = 2;
-          else if (token === "73") codeType = 3;
-        } else {
-          if (token === "717") codeType = 1;
-          else if (token === "727") codeType = 2;
-          else if (token === "737") codeType = 3;
-        }
-      }
-    } else {
-      const isAtWordStart = (j - token.length + 1 === 0) || (out.length === 0) ||
-        [" ", "\n", ".", "!", "?", ",", ";", ":", "("].includes(out[out.length - 1]);
-
-      if (isAtWordStart) {
-        if (isN) {
-          if (token === "71") codeType = 1;
-          else if (token === "72") codeType = 2;
-          else if (token === "73") codeType = 3;
-        } else {
-          if (token === "717") codeType = 1;
-          else if (token === "727") codeType = 2;
-          else if (token === "737") codeType = 3;
-        }
-      }
-
-      if (codeType === 0) {
-        if (token === "711" || token === "712" || token === "713" || token === "171") {
-          let inc = cipher[token];
-          if (inc) {
-            out += inc;
-            token = "";
+  let isN = state.numbers != "o",
+      cC = { ...c, ...(isN ? newCipher : oldCipher) },
+      cMap = isN ? { 71: 1, 72: 2, 73: 3 } : { 717: 1, 727: 2, 737: 3 },
+      dW = (x, cF) => {
+        let out = "", hE = false, cN = false, cW = false, cS = false, bO = false, t = "";
+        for (let j = 0; j < x.length; j++) {
+          let char = x[j];
+          if (!/[0-9]/.test(char)) {
+            out += char;
+            if (/[.,!? \n\r]/.test(char)) cS = cW = false;
             continue;
           }
+          t += char;
+          let n1 = x[j+1], n2 = x[j+2], cT = 0,
+              atWS = j - t.length + 1 == 0 || out == "" || /[ \n.!?,;:(]$/.test(out),
+              cA = () => {
+                if (/^(711|712|713|171)$/.test(t) && cipher[t]) return out += cipher[t], t = "", 1;
+                return (t=="71"&&/^[123]$/.test(n1))||(t=="7"&&n1=="1"&&/^[123]$/.test(n2))||(t=="17"&&n1=="1")||(t=="1"&&n1=="7"&&n2=="1")?1:0;
+              };
+
+          if (cF) {
+            if (cA()) continue;
+            if (atWS) cT = cMap[t] || cT;
+          } else {
+            if (atWS) cT = cMap[t] || cT;
+            if (cT == 0 && cA()) continue;
+          }
+
+          if (t == "00") cT = 4;
+          if (t == "373") cT = 5;
+          if (t == "0" && n1 == "0") continue;
+          if (cT == 0 && !isN && ((t == "7" && /^[123]$/.test(n1)) || /^7[123]$/.test(t) && n1 == "7")) continue;
+
+          if (cT > 0) {
+            if (cT == 1) cS = false, cN = true;
+            else if (cT == 2) cS = false, cW = true;
+            else if (cT == 3) cS = true;
+            else if (cT == 4) out += "\n", cS = cW = false;
+            else if (cT == 5) out += bO ? ")" : "(", bO = !bO;
+            t = "";
+            continue;
+          }
+
+          if (t.length == 3 || t == "0" || (!isN && t == "18")) {
+            let inc = cipher[t];
+            if (inc) {
+              if (/[.,!?\n\r]/.test(inc)) cS = cW = false;
+              if (inc == " ") cW = false;
+              out += (cN || cW || cS) ? inc : inc.toLowerCase();
+              cN = false;
+            } else out += `<span class='red'>${t}</span>`, hE = true;
+            t = "";
+          } else if (t.length > 3) out += `<span class='red'>${t}</span>`, hE = true, t = "";
         }
-        if (token === "71" && ["1", "2", "3"].includes(nextChar)) continue;
-        if (token === "7" && nextChar === "1" && ["1", "2", "3"].includes(next2Char)) continue;
-        if (token === "17" && nextChar === "1") continue;
-        if (token === "1" && nextChar === "7" && next2Char === "1") continue;
+        if (t.length > 0) out += `<span class='red'>${t}</span>`, hE = true;
+        return { O: out, E: hE };
+      };
+
+  return input
+    .replace(/4/g, "11")
+    .replace(/5/g, "22")
+    .replace(/6/g, "33")
+    .replace(/791(.*?)791/g, (_, ct) => {
+      let h = "", t = "";
+      for (let i = 0; i < ct.length; i++) {
+        t += ct[i];
+        if (t.length == 3 || t == "0" || (!isN && t == "18")) {
+          if (cC[t]) h += cC[t];
+          t = "";
+        } else if (t.length > 3) t = "";
       }
-    }
-
-    if (token === "00") codeType = 4;
-    if (token === "373") codeType = 5;
-    if (token === "0" && nextChar === "0") continue;
-    if (codeType === 0 && !isN) {
-      if (token === "7" && ["1", "2", "3"].includes(nextChar)) continue;
-      if ((token === "71" || token === "72" || token === "73") && nextChar === "7") continue;
-    }
-
-    if (codeType > 0) {
-      if (codeType === 1) {
-        capSentence = false;
-        capNext = true;
-      } else if (codeType === 2) {
-        capSentence = false;
-        capWord = true;
-      } else if (codeType === 3) {
-        capSentence = true;
-      } else if (codeType === 4) {
-        out += "\n";
-        capSentence = false;
-        capWord = false;
-      } else if (codeType === 5) {
-        if (bracketOpen) {
-          out += ")";
-          bracketOpen = false;
-        } else {
-          out += "(";
-          bracketOpen = true;
-        }
+      if (!h) return "";
+      try { return `<span class='blue'>${String.fromCodePoint(parseInt(h, 16))}</span>`; }
+      catch (e) { return `<span class='red'>${h}</span>`; }
+    })
+    .split(" ")
+    .filter(x => x)
+    .map(x => {
+      let r = dW(x, state.capitalization == "cipher");
+      if (r.E) {
+        let a = dW(x, state.capitalization != "cipher");
+        if (!a.E) r = a;
       }
-      token = "";
-      continue;
-    }
-
-    if (token.length === 3 || token === "0" || (!isN && token === "18")) {
-      let inc = cipher[token];
-      if (inc) {
-        if ([".", ",", "!", "?", "\n", "\r"].includes(inc)) {
-          capSentence = false;
-          capWord = false;
-        }
-        if (inc === " ") capWord = false;
-
-        let finalChar = inc;
-        let doCap = capNext || capWord || capSentence;
-        if (!doCap) finalChar = finalChar.toLowerCase();
-        out += finalChar;
-        capNext = false;
-      } else {
-        out += `<span class='red'>${token}</span>`;
-        hasError = true;
-      }
-      token = "";
-    } else if (token.length > 3) {
-      out += `<span class='red'>${token}</span>`;
-      hasError = true;
-      token = "";
-    }
-  }
-  if (token.length > 0) {
-    out += `<span class='red'>${token}</span>`;
-    hasError = true;
-  }
-
-  return { output: out, hasError: hasError };
+      return r.O;
+    })
+    .join(" ");
 }
 
 function encrypt(input, forceCaseInsensitive = false) {
