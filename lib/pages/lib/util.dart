@@ -1,14 +1,7 @@
 // util functions
 bool isLetter(String ch) {
   if (ch.isEmpty) return false;
-  final up = ch.toUpperCase();
-  final low = ch.toLowerCase();
-  return up != low;
-}
-
-bool isTerminator(String ch) {
-  const terminators = {'.', ',', '!', '?', '\n', '\r'};
-  return terminators.contains(ch);
+  return ch.toUpperCase() != ch.toLowerCase();
 }
 
 String a2u(String ch) {
