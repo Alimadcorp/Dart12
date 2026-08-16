@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -48,16 +49,74 @@ class _HelpPageState extends State<HelpPage> {
                           ),
                           SizedBox(height: 8.0),
                           RichText(
-                            '312 is a substitution cipher invented by 3121534312, an anonymous person on YouTube. This tool allows you to encode and decode the 312 cipher! Just enter your input into the text box above, and get the encoded/decoded output in the box below it. Scroll down and click \'Got it\' to get started.',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                            text: TextSpan(
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              children: [
+                                const TextSpan(
+                                  text: '312 is a substitution cipher invented by ',
+                                ),
+                                TextSpan(
+                                  text: '3121534312',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.primary,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () {
+                                      _openUrl("https://www.youtube.com/@3121534312");
+                                    },
+                                ),
+                                const TextSpan(
+                                  text: ', an anonymous person on YouTube. This tool allows you to encode and decode the 312 cipher! Just enter your input into the text box above, and get the encoded/decoded output in the box below it. ',
+                                ),
+                                const TextSpan(
+                                  text: "Scroll down and click 'Got it' to get started.",
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ],
                             ),
                           ),
                           SizedBox(height: 8.0),
-                          Text(
-                            'The interpretation of the cipher used in this app is according to what the RGN (RetroGamingNow) community came up with. A link to their research is given at the end.',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                          RichText(
+                            text: TextSpan(
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: 'The interpretation of the cipher used in this app is according to what ',
+                                ),
+                                TextSpan(
+                                  text: 'RetroGamingNow',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.primary,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () {
+                                      _openUrl("https://www.youtube.com/@retrogamingnow");
+                                    },
+                                ),
+                                TextSpan(
+                                  text: '\'s ',
+                                ),
+                                TextSpan(
+                                  text: 'community',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.primary,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () {
+                                      _openUrl("https://discord.gg/RetroGamingNow");
+                                    },
+                                ),
+                                TextSpan(
+                                  text: ' came up with. A link to their research is given at the end.',
+                                ),
+                              ]
                             ),
                           ),
                           SizedBox(height: 8.0),
