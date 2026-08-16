@@ -12,7 +12,8 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-android {
+// FIX: Explicitly target the public interface required by AGP 9.0+
+configure<com.android.build.api.dsl.ApplicationExtension> {
     namespace = "com.alimad.dart12"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "29.0.14206865"
