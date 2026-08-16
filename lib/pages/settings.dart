@@ -60,16 +60,16 @@ class _SettingsPageState extends State<SettingsPage> {
           DropdownButtonFormField<String>(
             initialValue: _unmatchedChar,
             decoration: const InputDecoration(
-              labelText: 'Unmatched Characters Handling',
+              labelText: 'What to do with unmatched chars',
               border: OutlineInputBorder(),
             ),
             items: const [
-              DropdownMenuItem(value: 'as_is', child: Text('Use As-Is')),
+              DropdownMenuItem(value: 'as_is', child: Text('Do nothing')),
               DropdownMenuItem(
                 value: 'question_mark',
                 child: Text('Replace with ?'),
               ),
-              DropdownMenuItem(value: 'unicode', child: Text('Use Unicode')),
+              DropdownMenuItem(value: 'unicode', child: Text('Replace with unicode')),
             ],
             onChanged: (val) {
               if (val != null) {
@@ -79,6 +79,14 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
 
+          const SizedBox(height: 12),
+
+          Text("What to do with characters that don't exist in the cipher?\nLeave them as they are, replace with a ? symbol, or replace with a codepoint using the unicode encoding standard that was introduced in the 2014 cipher update", 
+          textScaler: TextScaler.linear(0.8), 
+          style: TextStyle(
+            color: Color.from(alpha: 1.0, red: 0.5, green: 0.5, blue: 0.5)
+          )),
+          
           const Divider(height: 40),
 
           Text(
@@ -99,10 +107,16 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           ListTile(
             leading: const Icon(Icons.language),
-            title: const Text('Web Version'),
-            subtitle: const Text('312.alimad.co'),
+            title: const Text('All Versions'),
+            subtitle: const Text('alimad.itch.io/312'),
             trailing: const Icon(Icons.open_in_new, size: 18),
-            onTap: () => _openUrl('https://312.alimad.co'),
+            onTap: () => _openUrl('https://alimad.itch.io/312'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.ondemand_video_rounded),
+            title: const Text('312\'s Youtube Channel'),
+            trailing: const Icon(Icons.open_in_new, size: 18),
+            onTap: () => _openUrl('https://youtube.com/@3121534312'),
           ),
           ListTile(
             leading: const Icon(Icons.android),
@@ -113,7 +127,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.slideshow),
+            leading: const Icon(Icons.description_outlined),
             title: const Text('RGN Analysis Slides'),
             trailing: const Icon(Icons.open_in_new, size: 18),
             onTap: () => _openUrl(

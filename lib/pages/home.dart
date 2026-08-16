@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dart12/pages/help.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,9 +26,11 @@ class _HomePageState extends State<HomePage> {
   bool _encryptMode = true;
   bool _isLoading = true;
   bool _v1 = false;
+  bool _viewedHelp = false;
   bool _caseSensitivity = true;
   String _unmatchedChar = 'as_is';
 
+  static const String _keyViewedHelp = 'viewed_help';
   static const String _keyInput = 'saved_input';
   static const String _keyEncryptMode = 'encrypt_mode';
   static const String _keyV1 = 'v1_mode';
@@ -47,31 +50,26 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _encryptMode = _prefs?.getBool(_keyEncryptMode) ?? true;
       _v1 = _prefs?.getBool(_keyV1) ?? false;
+      _viewedHelp = _prefs?.getBool(_keyViewedHelp) ?? false;
       final dynamic _r = _prefs?.get(_keyCaseSensitivity);
       _caseSensitivity = (_r is bool) ? _r : true;
-
       _unmatchedChar = _prefs?.getString(_keyUnmatchedChar) ?? 'as_is';
-
       final savedText = _prefs?.getString(_keyInput) ?? "";
       _inputController.text = savedText;
       _lastProcessedText = savedText;
-
       _isLoading = false;
     });
 
-    if (_inputController.text.isNotEmpty) {
-      _processText();
-    }
+    if (_inputController.text.isNotEmpty) { _processText(); }
+    if (!_viewedHelp) { _help(); }
   }
 
   void _onTextChanged() {
     if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-
     // add a 200 ms delay if length is greater than 100 to improve performance while typin
     final int duration =  _inputController.text.length > 100 ? 200 : 0; 
     _debounceTimer = Timer(Duration(milliseconds: duration), () {
       final currentText = _inputController.text;
-
       if (currentText != _lastProcessedText) {
         _lastProcessedText = currentText;
         _processText();
@@ -93,12 +91,9 @@ class _HomePageState extends State<HomePage> {
               text,
               _v1 ? 1 : 2,
               _caseSensitivity,
-              _unmatchedChar == "as_is"
-                  ? 0
-                  : (_unmatchedChar == "question_mark" ? 1 : 2),
+              _unmatchedChar == "as_is" ? 0 : (_unmatchedChar == "question_mark" ? 1 : 2),
             )
           : decode(text, _v1 ? 1 : 2, _caseSensitivity);
-
       if (mounted && text == _inputController.text) {
         setState(() => _output = result);
       }
@@ -140,7 +135,7 @@ class _HomePageState extends State<HomePage> {
   void _swap() {
     if (_output.isEmpty) return;
     _debounceTimer?.cancel();
-    final newText = _output;
+    final newText = _output.replaceFirst(RegExp(r'[0\n]*$'), ''); // replace all trailing 0s and breaks
     _encryptMode = !_encryptMode;
     _saveBool(_keyEncryptMode, _encryptMode);
     _lastProcessedText = newText;
@@ -173,6 +168,12 @@ class _HomePageState extends State<HomePage> {
       });
       _processText();
     }
+  }
+
+  void _help() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const HelpPage()),
+    );
   }
 
   @override
@@ -241,6 +242,7 @@ class _HomePageState extends State<HomePage> {
                 onPaste: _paste,
                 onClear: _clear,
                 onSettings: _settings,
+                onHelp: _help,
               ),
             ],
           ),

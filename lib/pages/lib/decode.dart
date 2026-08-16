@@ -20,6 +20,7 @@ String decode(String masterInput, int version, bool caseSensitive) {
   final StringBuffer acc = StringBuffer(); // accumulator
   int accL = 0; // accumulator length
   bool _cL = false, _cW = false; // capitalize by letter, word
+  bool _b = false; // bracket open
   for (int sentence = 0; sentence < inputs.length; sentence++) {
     final String input;
     final bool _cS; // capital sentence
@@ -84,6 +85,10 @@ String decode(String masterInput, int version, bool caseSensitive) {
             case 737:
               token = null; // this is a repeated 737, we ignore it... quite a rare case
               acc.clear(); accL = 0; break;
+            case 373:
+              // added bracket support
+              _b = !_b; token = _b ? '(' : ')'; break; 
+              // do not clear accumulator as token is not null, hence the clear loop wont be skipped
             default: token = nAcc != null ? cipher(nAcc, version) : null;
           }
         } else if (version == 2) {
@@ -91,13 +96,20 @@ String decode(String masterInput, int version, bool caseSensitive) {
             case 73: token = null; acc.clear(); accL = 0;
             case 72: token = null; acc.clear(); accL = 0; _cW = true; break;
             case 71: token = null; acc.clear(); accL = 0; _cL = true; break;
+            case 373: _b = !_b; token = _b ? '(' : ')'; break;
             default: token = nAcc != null ? cipher(nAcc, version) : null;
           }
         } else {
           token = nAcc != null ? cipher(nAcc, version) : null;
+          // unreachable unless you do something stupid
+          // please dont do stupid things
         }
       } else {
-        token = nAcc != null ? cipher(nAcc, version) : null; // these will be all upper...
+        if(nAcc == 373) {
+          _b = !_b; token = _b ? '(' : ')';
+        } else {
+          token = nAcc != null ? cipher(nAcc, version) : null; // these will be all upper...
+        }
       }
 
       if (token != null) {
