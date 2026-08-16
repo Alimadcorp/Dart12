@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class BoxIconButton extends StatefulWidget {
   final IconData icon;
   final void Function(bool isToggled) onTap;
+  final VoidCallback? onLongTap;
   final bool isToggleable;
   final bool toggled;
   final double size;
@@ -11,6 +12,7 @@ class BoxIconButton extends StatefulWidget {
     super.key,
     required this.icon,
     required this.onTap,
+    this.onLongTap,
     this.isToggleable = false,
     this.toggled = false,
     this.size = 48.0,
@@ -48,6 +50,8 @@ class _BoxIconButtonState extends State<BoxIconButton> {
       onTap: () {
         widget.onTap(!widget.toggled);
       },
+      onLongPress: widget.onLongTap,
+      onSecondaryTapDown: (_) => widget.onLongTap?.call(),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         width: widget.size,

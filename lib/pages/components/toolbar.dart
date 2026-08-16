@@ -15,6 +15,7 @@ class BottomToolbar extends StatelessWidget {
   final VoidCallback onClear;
   final VoidCallback onSettings;
   final VoidCallback onHelp;
+  final ValueChanged<String>? onHelpHighlight;
 
   const BottomToolbar({
     super.key,
@@ -30,6 +31,7 @@ class BottomToolbar extends StatelessWidget {
     required this.onClear,
     required this.onSettings,
     required this.onHelp,
+    this.onHelpHighlight,
   });
 
   @override
@@ -52,21 +54,58 @@ class BottomToolbar extends StatelessWidget {
                   ),
                 ),
                 child: BoxIconButton(
-                  key: ValueKey(encryptMode), // update on change
+                  key: ValueKey(encryptMode),
                   icon: Icons.code_off,
                   isToggleable: true,
                   toggled: encryptMode,
                   onTap: onModeChanged,
+                  onLongTap: () => onHelpHighlight?.call('Encode/Decode'),
                 ),
               ),
-              BoxIconButton(icon: Icons.copy, onTap: (_) => onCopy()),
-              BoxIconButton(icon: Icons.paste, onTap: (_) => onPaste()),
-              BoxIconButton(icon: Icons.delete, onTap: (_) => onClear()),
-              BoxIconButton(icon: Icons.text_fields, isToggleable: true, toggled: caseSensitivity, onTap: onCaseSensChanged),
-              BoxIconButton(icon: Icons.looks_one, isToggleable: true, toggled: v1, onTap: onVersionChanged),
-              BoxIconButton(icon: Icons.swap_vert, onTap: (_) => onSwap()),
-              BoxIconButton(icon: Icons.help_outline, onTap: (_) => onHelp()),
-              BoxIconButton(icon: Icons.settings, onTap: (_) => onSettings()),
+              BoxIconButton(
+                icon: Icons.copy,
+                onTap: (_) => onCopy(),
+                onLongTap: () => onHelpHighlight?.call('Copy'),
+              ),
+              BoxIconButton(
+                icon: Icons.paste,
+                onTap: (_) => onPaste(),
+                onLongTap: () => onHelpHighlight?.call('Paste'),
+              ),
+              BoxIconButton(
+                icon: Icons.delete,
+                onTap: (_) => onClear(),
+                onLongTap: () => onHelpHighlight?.call('Clear'),
+              ),
+              BoxIconButton(
+                icon: Icons.text_fields,
+                isToggleable: true,
+                toggled: caseSensitivity,
+                onTap: onCaseSensChanged,
+                onLongTap: () => onHelpHighlight?.call('Case sensitinivity'),
+              ),
+              BoxIconButton(
+                icon: Icons.looks_one,
+                isToggleable: true,
+                toggled: v1,
+                onTap: onVersionChanged,
+                onLongTap: () => onHelpHighlight?.call('Version'),
+              ),
+              BoxIconButton(
+                icon: Icons.swap_vert,
+                onTap: (_) => onSwap(),
+                onLongTap: () => onHelpHighlight?.call('Swap'),
+              ),
+              BoxIconButton(
+                icon: Icons.help_outline,
+                onTap: (_) => onHelp(),
+                onLongTap: () => onHelpHighlight?.call('Help'),
+              ),
+              BoxIconButton(
+                icon: Icons.settings,
+                onTap: (_) => onSettings(),
+                onLongTap: () => onHelpHighlight?.call('Settings'),
+              ),
             ],
           ),
         ),
