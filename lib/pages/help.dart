@@ -32,9 +32,6 @@ class _HelpPageState extends State<HelpPage> {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(12.0),
                 children: [
@@ -50,8 +47,8 @@ class _HelpPageState extends State<HelpPage> {
                             ),
                           ),
                           SizedBox(height: 8.0),
-                          Text(
-                            '312 is a substitution cipher invented by 3121534312, an anonymous person on YouTube. This tool allows you to encode to and decode from the 312 cipher! Just enter your input into the text box above, and get the encoded/decoded output in the box below it. Click \'Got it\' to get started.',
+                          RichText(
+                            '312 is a substitution cipher invented by 3121534312, an anonymous person on YouTube. This tool allows you to encode and decode the 312 cipher! Just enter your input into the text box above, and get the encoded/decoded output in the box below it. Scroll down and click \'Got it\' to get started.',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -79,21 +76,63 @@ class _HelpPageState extends State<HelpPage> {
                     theme,
                     icon: Icons.code,
                     title: 'Encode/Decode',
-                    subtitle: 'Press to toggle between whether to encode or to decode',
+                    subtitle: 'Press to toggle between encode and decode mode',
                   ),
                   const SizedBox(height: 8.0),
                   _buildHelpCard(
                     theme,
                     icon: Icons.text_fields,
                     title: 'Case sensitinivity',
-                    subtitle: 'Press to toggle. If this is on, the capitalization will be preserved in output. In decode mode, toggling this on will prioritize parsing capitalization before substitution, which may be useful if you are not getting the intended output, sometimes...',
+                    subtitle: 'If this is on, capitalization will be preserved in output.\nIn decode mode, toggling this on will prioritize parsing capitalization before substitution, which may be useful if you are not getting the intended output, sometimes...',
                   ),
                   const SizedBox(height: 8.0),
                   _buildHelpCard(
                     theme,
                     icon: Icons.looks_two,
-                    title: '3. Data & Privacy',
-                    subtitle: 'Your data stays secure and strictly local.',
+                    title: 'Version',
+                    subtitle: 'Toggle between version 1 and 2 of the cipher. Version 1 is since before the 2014 trinary update',
+                  ),
+                  const SizedBox(height: 8.0),
+                  _buildHelpCard(
+                    theme,
+                    icon: Icons.swap_vert,
+                    title: 'Swap',
+                    subtitle: 'Toggles encode mode and swaps the output with input',
+                  ),
+                  const SizedBox(height: 8.0),
+                  _buildHelpCard(
+                    theme,
+                    icon: Icons.copy,
+                    title: 'Copy',
+                    subtitle: 'Copy the output to clipboard',
+                  ),
+                  const SizedBox(height: 8.0),
+                  _buildHelpCard(
+                    theme,
+                    icon: Icons.paste,
+                    title: 'Paste',
+                    subtitle: 'Paste input from clipboard',
+                  ),
+                  const SizedBox(height: 8.0),
+                  _buildHelpCard(
+                    theme,
+                    icon: Icons.delete,
+                    title: 'Clear',
+                    subtitle: 'Clear the input and output',
+                  ),
+                  const SizedBox(height: 8.0),
+                  _buildHelpCard(
+                    theme,
+                    icon: Icons.help_outline,
+                    title: 'Help',
+                    subtitle: 'Open this screen',
+                  ),
+                  const SizedBox(height: 8.0),
+                  _buildHelpCard(
+                    theme,
+                    icon: Icons.settings,
+                    title: 'Settings',
+                    subtitle: 'View more options, links and credits',
                   ),
 
                   const SizedBox(height: 8.0),
@@ -111,7 +150,7 @@ class _HelpPageState extends State<HelpPage> {
                   ListTile(
                     contentPadding: EdgeInsets.symmetric(horizontal: 8.0),
                     leading: const Icon(Icons.ondemand_video_rounded),
-                    title: const Text('312\'s Channel'),
+                    title: const Text("312's Channel"),
                     trailing: const Icon(Icons.open_in_new, size: 18),
                     onTap: () => _openUrl('https://youtube.com/@3121534312'),
                   ),
@@ -123,22 +162,16 @@ class _HelpPageState extends State<HelpPage> {
                     trailing: const Icon(Icons.open_in_new, size: 18),
                     onTap: () => _openUrl('https://docs.google.com/presentation/d/110bIi0N-z-D4FKMVwkCpnr1YUTwLF7zX79gop2ZVmQo/present'),
                   ),
+                  SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Got it'),
+                    ),
+                  ),
                 ],
               ),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Got it'),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
