@@ -50,6 +50,42 @@ Stream<Progress> startAsyncEncode({
   }
 }
 
+Stream<Progress> startAsyncDecode({
+  required String input,
+  required int version,
+  required bool caseSensitive,
+}) async* {
+  final ReceivePort receivePort = ReceivePort();
+  Isolate? isolate;
+
+  try {
+    final Uint8List inputBytes = utf8.encode(input);
+    final transferable = TransferableTypedData.fromList([inputBytes]);
+
+    final config = DecodeConfig(
+      transferableInput: transferable,
+      version: version,
+      caseSensitive: caseSensitive,
+      replyTo: receivePort.sendPort,
+    );
+
+    isolate = await Isolate.spawn(decodeIsolate, config);
+
+    await for (final dynamic message in receivePort) {
+      if (message is Progress) {
+        yield message;
+        
+        if (message.progress >= 1.0) {
+          break; 
+        }
+      }
+    }
+  } finally {
+    receivePort.close();
+    isolate?.kill(priority: Isolate.immediate);
+  }
+}
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -164,22 +200,31 @@ class _HomePageState extends State<HomePage> {
       );
     } 
     else {
-      try {
-        final result = decode(text, _v1 ? 1 : 2, _caseSensitivity); 
-        if (mounted && text == _inputController.text) {
+      final progressStream = startAsyncDecode(
+        input: text,
+        version: _v1 ? 1 : 2,
+        caseSensitive: _caseSensitivity,
+      );
+
+      _encodingSubscription = progressStream.listen(
+        (Progress data) {
+          if (!mounted || text != _inputController.text) return;
+          
           setState(() {
-            _output = result;
+            _progressValue = data.progress.clamp(0.0, 1.0);
+            if (data.finalResult != null) {
+              _output = data.finalResult!;
+            }
+          });
+        },
+        onError: (error) {
+          if (!mounted) return;
+          setState(() {
+            _output = "Error: $error";
             _progressValue = 1.0;
           });
-        }
-      } catch (e) {
-        if (mounted && text == _inputController.text) {
-          setState(() {
-            _output = e.toString();
-            _progressValue = 1.0;
-          });
-        }
-      }
+        },
+      );
     }
   }
 
@@ -314,7 +359,6 @@ class _HomePageState extends State<HomePage> {
                 ),
                 alignment: Alignment.centerLeft,
                 child: FractionallySizedBox(
-                  //duration: const Duration(milliseconds: 200),
                   widthFactor: _progressValue,
                   heightFactor: 1.0,
                   child: ColoredBox(color: theme.colorScheme.primary),

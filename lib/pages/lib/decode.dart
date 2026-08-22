@@ -1,27 +1,81 @@
+import 'dart:isolate';
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'map.dart';
 import 'util.dart';
+import 'encode.dart';
 
-String decode(String masterInput, int version, bool caseSensitive) {
+class DecodeConfig {
+  final TransferableTypedData? transferableInput;
+  final String? input;
+  final int version;
+  final bool caseSensitive;
+  final SendPort? replyTo;
+
+  DecodeConfig({
+    this.transferableInput, this.input, required this.version, required this.caseSensitive, this.replyTo,
+  });
+}
+
+String decodeIsolate(DecodeConfig config) {
+  final String input;
+  if (config.transferableInput != null) {
+    final ByteBuffer buffer = config.transferableInput!.materialize();
+    final Uint8List raw = buffer.asUint8List();
+    input = utf8.decode(raw);
+  } else if (config.input != null) {
+    input = config.input!;
+  } else {
+    input = "";
+  }
+
+  // Runs the decode method and passes the port down for progress
+  final String result = decode(input, config.version, config.caseSensitive, config.replyTo);
+  
+  config.replyTo?.send(Progress(
+    progress: 1.0, 
+    finalResult: result,
+  ));
+
+  return result;
+}
+
+// Modified to accept an optional SendPort so it doesn't break when making recursive unicode calls
+String decode(String masterInput, int version, bool caseSensitive, [SendPort? progressPort]) {
   
   final StringBuffer out = StringBuffer();
-  masterInput = decompress(masterInput); // only place where decompression takes place
+  // only place where decompression takes place
+  masterInput = masterInput.replaceAll('4', '11').replaceAll('5', '22').replaceAll('6', '33'); 
 
   masterInput = masterInput.replaceAllMapped(RegExp(r'791(.*?)791'), (Match match) {
     final String token = match.group(1) ?? "";
-    return u2a(decode(token, version, false));
-  }); // replace all unicode chars
+    return u2a(decode(token, version, false)); // Recursive call gracefully skips progress reporting
+  }); 
   
   // if not case sensitive and version is 1, remove those characters...
   if(!caseSensitive && version == 1) masterInput = masterInput.replaceAll('717', '').replaceAll('727', '').replaceAll('737', ''); 
 
   // split into sentences
-  final List<String> inputs = masterInput.split(RegExp(r'\r?\n|00')); // split by double 0 or line break
+  final List<String> inputs = masterInput.split(RegExp(r'\r?\n|00')); 
 
-  final StringBuffer acc = StringBuffer(); // accumulator
-  int accL = 0; // accumulator length
-  bool _cL = false, _cW = false; // capitalize by letter, word
-  bool _b = false; // bracket open
+  final StringBuffer acc = StringBuffer(); 
+  int accL = 0; 
+  bool _cL = false, _cW = false; 
+  bool _b = false; 
+
+  int lastProgress = -1;
+  final int total = inputs.length;
+
   for (int sentence = 0; sentence < inputs.length; sentence++) {
+    if (progressPort != null) {
+      int currentProgress = (sentence * 90) ~/ (total > 0 ? total : 1);
+      if (currentProgress != lastProgress || sentence == total - 1) {
+        progressPort.send(Progress(progress: currentProgress / 100.0));
+        lastProgress = currentProgress;
+      }
+    }
+
     final String input;
     final bool _cS; // capital sentence
     if (caseSensitive && inputs[sentence].startsWith("73")) {
@@ -71,7 +125,6 @@ String decode(String masterInput, int version, bool caseSensitive) {
       final int? nAcc = int.tryParse(accStr);
       final String? token;
 
-
       if (caseSensitive) {
         if (version == 1) {
           switch (nAcc) {
@@ -93,7 +146,7 @@ String decode(String masterInput, int version, bool caseSensitive) {
           }
         } else if (version == 2) {
           switch (nAcc) {
-            case 73: token = null; acc.clear(); accL = 0;
+            case 73: token = null; acc.clear(); accL = 0; break;
             case 72: token = null; acc.clear(); accL = 0; _cW = true; break;
             case 71: token = null; acc.clear(); accL = 0; _cL = true; break;
             case 373: _b = !_b; token = _b ? '(' : ')'; break;
