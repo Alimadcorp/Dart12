@@ -19,29 +19,34 @@ Stream<Progress> startAsyncEncode({
   required int unmatched,
 }) async* {
   final ReceivePort receivePort = ReceivePort();
-  final Uint8List inputBytes = utf8.encode(input);
-  final transferable = TransferableTypedData.fromList([inputBytes]);
+  Isolate? isolate;
 
-  final config = EncodeConfig(
-    transferableInput: transferable,
-    version: version,
-    caseSensitive: caseSensitive,
-    unmatched: unmatched,
-    replyTo: receivePort.sendPort,
-  );
+  try {
+    final Uint8List inputBytes = utf8.encode(input);
+    final transferable = TransferableTypedData.fromList([inputBytes]);
 
-  final Isolate isolate = await Isolate.spawn(encode, config);
+    final config = EncodeConfig(
+      transferableInput: transferable,
+      version: version,
+      caseSensitive: caseSensitive,
+      unmatched: unmatched,
+      replyTo: receivePort.sendPort,
+    );
 
-  await for (final dynamic message in receivePort) {
-    if (message is Progress) {
-      yield message;
-      
-      if (message.progress >= 1.0) {
-        receivePort.close();
-        isolate.kill(priority: Isolate.immediate);
-        break;
+    isolate = await Isolate.spawn(encode, config);
+
+    await for (final dynamic message in receivePort) {
+      if (message is Progress) {
+        yield message;
+        
+        if (message.progress >= 1.0) {
+          break; // Exit loop to trigger finally block
+        }
       }
     }
+  } finally {
+    receivePort.close();
+    isolate?.kill(priority: Isolate.immediate);
   }
 }
 

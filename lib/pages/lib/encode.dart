@@ -5,7 +5,6 @@ import 'dart:typed_data';
 import 'map.dart';
 import 'util.dart';
 
-
 class Progress {
   final double progress;
   final String? finalResult;
@@ -26,41 +25,6 @@ class EncodeConfig {
   });
 }
 
-void compressQ(StringBuffer buffer) {
-  final str = buffer.toString();
-  final len = str.length;
-  if (len < 2) return;
-  StringBuffer? newBuffer;
-  int lastWriteIndex = 0;
-  int i = 0;
-  while (i < len - 1) {
-    final c1 = str.codeUnitAt(i);
-    final c2 = str.codeUnitAt(i + 1);
-    String? replacement;
-    if (c1 == 49 && c2 == 49) { replacement = '4'; } 
-    else if (c1 == 50 && c2 == 50) { replacement = '5'; }
-    else if (c1 == 51 && c2 == 51) { replacement = '6'; }
-
-    if (replacement != null) {
-      newBuffer ??= StringBuffer();
-      if (i > lastWriteIndex) {
-        newBuffer.write(str.substring(lastWriteIndex, i));
-      }
-      newBuffer.write(replacement);
-      i += 2;
-      lastWriteIndex = i;
-    } else {
-      i++;
-    }
-  }
-  if (newBuffer == null) return;
-  if (lastWriteIndex < len) {
-    newBuffer.write(str.substring(lastWriteIndex));
-  }
-  buffer.clear();
-  buffer.write(newBuffer.toString());
-}
-
 String encode(EncodeConfig config) {
   final String input;
   final int version = config.version;
@@ -77,7 +41,6 @@ String encode(EncodeConfig config) {
   } else {
     input = "";
   }
-
 
   final int total = input.length;
   final StringBuffer out = StringBuffer();
@@ -98,13 +61,17 @@ String encode(EncodeConfig config) {
   int lS = 0, wS = 0; // line start, word start
   int lE = -1, wE = -1; // line end, word end
   int lU = 0, wU = 0; // is current line/word uppercase? -1: no, 0: idk, 1: yea
-  // we do this so that we dont end up recalculating stuff
-  const int updateInterval = 500;
+  
+  int lastProgress = -1; 
 
   for (int i = 0; i < input.length; i++) {
-    if (progressPort != null && (i % updateInterval == 0 || i == total - 1)) {
-      progressPort.send(Progress(progress: i / total * 0.90)); 
-      // max is 90%, 95 is when compression starts, 100 is when everything done
+    // Only send updates when percentage changes to prevent port flooding and lag
+    if (progressPort != null) {
+      int currentProgress = (i * 90) ~/ (total > 0 ? total : 1);
+      if (currentProgress != lastProgress || i == total - 1) {
+        progressPort.send(Progress(progress: currentProgress / 100.0));
+        lastProgress = currentProgress;
+      }
     }
 
     final String ch = input[i];
@@ -175,11 +142,16 @@ String encode(EncodeConfig config) {
   }
 
   // The only point where compression takes place
-  progressPort?.send(Progress(progress: 0.95)); // compression started
-  compressQ(out);
+  progressPort?.send(Progress(progress: 0.92)); // compression started
+  
+  String compressed = out.toString();
+  compressed = compressed.replaceAll('11', '4');
+  progressPort?.send(Progress(progress: 0.94));
+  compressed = compressed.replaceAll('22', '5');
+  progressPort?.send(Progress(progress: 0.96));
+  compressed = compressed.replaceAll('33', '6');
 
   progressPort?.send(Progress(progress: 0.98));
-  final String compressed = out.toString();
 
   progressPort?.send(Progress(
     progress: 1.0, 
