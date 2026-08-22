@@ -1,6 +1,6 @@
 import 'dart:isolate';
 import 'dart:convert';
-import 'package:flutter/services.dart';
+import 'dart:typed_data';
 
 import 'map.dart';
 import 'util.dart';
@@ -8,9 +8,9 @@ import 'util.dart';
 
 class Progress {
   final double progress;
-  final TransferableTypedData? result;
+  final String? finalResult;
 
-  Progress({ required this.progress, this.result });
+  Progress({ required this.progress, this.finalResult });
 }
 
 class EncodeConfig {
@@ -26,6 +26,41 @@ class EncodeConfig {
   });
 }
 
+void compressQ(StringBuffer buffer) {
+  final str = buffer.toString();
+  final len = str.length;
+  if (len < 2) return;
+  StringBuffer? newBuffer;
+  int lastWriteIndex = 0;
+  int i = 0;
+  while (i < len - 1) {
+    final c1 = str.codeUnitAt(i);
+    final c2 = str.codeUnitAt(i + 1);
+    String? replacement;
+    if (c1 == 49 && c2 == 49) { replacement = '4'; } 
+    else if (c1 == 50 && c2 == 50) { replacement = '5'; }
+    else if (c1 == 51 && c2 == 51) { replacement = '6'; }
+
+    if (replacement != null) {
+      newBuffer ??= StringBuffer();
+      if (i > lastWriteIndex) {
+        newBuffer.write(str.substring(lastWriteIndex, i));
+      }
+      newBuffer.write(replacement);
+      i += 2;
+      lastWriteIndex = i;
+    } else {
+      i++;
+    }
+  }
+  if (newBuffer == null) return;
+  if (lastWriteIndex < len) {
+    newBuffer.write(str.substring(lastWriteIndex));
+  }
+  buffer.clear();
+  buffer.write(newBuffer.toString());
+}
+
 String encode(EncodeConfig config) {
   final String input;
   final int version = config.version;
@@ -34,7 +69,8 @@ String encode(EncodeConfig config) {
   final SendPort? progressPort = config.replyTo;
 
   if (config.transferableInput != null) {
-    final Uint8List raw = config.transferableInput!.materialize().asUint8List();
+    final ByteBuffer buffer = config.transferableInput!.materialize();
+    final Uint8List raw = buffer.asUint8List();
     input = utf8.decode(raw);
   } else if (config.input != null) {
     input = config.input!;
@@ -63,10 +99,13 @@ String encode(EncodeConfig config) {
   int lE = -1, wE = -1; // line end, word end
   int lU = 0, wU = 0; // is current line/word uppercase? -1: no, 0: idk, 1: yea
   // we do this so that we dont end up recalculating stuff
+  const int updateInterval = 500;
 
   for (int i = 0; i < input.length; i++) {
-    progressPort?.send(Progress(progress: i / total * 0.90)); // send progress
-    // max is 90%, 95 is when compression starts, 100 is when everything done
+    if (progressPort != null && (i % updateInterval == 0 || i == total - 1)) {
+      progressPort.send(Progress(progress: i / total * 0.90)); 
+      // max is 90%, 95 is when compression starts, 100 is when everything done
+    }
 
     final String ch = input[i];
     if (ch == '\n' || ch == '\r') { // marks end of a line
@@ -137,11 +176,15 @@ String encode(EncodeConfig config) {
 
   // The only point where compression takes place
   progressPort?.send(Progress(progress: 0.95)); // compression started
-  final String compressed = compress(out.toString());
+  compressQ(out);
 
-  if (progressPort != null) {
-    final Uint8List outBytes = utf8.encode(compressed);
-    progressPort.send(Progress(progress: 1.0, result: TransferableTypedData.fromList([outBytes])));
-  }
+  progressPort?.send(Progress(progress: 0.98));
+  final String compressed = out.toString();
+
+  progressPort?.send(Progress(
+    progress: 1.0, 
+    finalResult: compressed,
+  ));
+
   return compressed;
 }

@@ -19,9 +19,8 @@ Stream<Progress> startAsyncEncode({
   required int unmatched,
 }) async* {
   final ReceivePort receivePort = ReceivePort();
-
   final Uint8List inputBytes = utf8.encode(input);
-  final TransferableTypedData transferable = TransferableTypedData.fromList([inputBytes]);
+  final transferable = TransferableTypedData.fromList([inputBytes]);
 
   final config = EncodeConfig(
     transferableInput: transferable,
@@ -32,9 +31,11 @@ Stream<Progress> startAsyncEncode({
   );
 
   final Isolate isolate = await Isolate.spawn(encode, config);
+
   await for (final dynamic message in receivePort) {
     if (message is Progress) {
       yield message;
+      
       if (message.progress >= 1.0) {
         receivePort.close();
         isolate.kill(priority: Isolate.immediate);
@@ -60,12 +61,12 @@ class _HomePageState extends State<HomePage> {
   bool _encryptMode = true;
   bool _isLoading = true;
   bool _v1 = false;
-  bool _viewedHelp = false;
+  bool _viewedHelp = true;
   bool _caseSensitivity = true;
   String _unmatchedChar = 'as_is';
   StreamSubscription<Progress>? _encodingSubscription;
   // our subsription when a stream is alive
-  double _progressValue = 0.0;
+  double _progressValue = 1.0;
 
   static const String _keyViewedHelp = 'viewed_help';
   static const String _keyInput = 'saved_input';
@@ -143,8 +144,8 @@ class _HomePageState extends State<HomePage> {
           
           setState(() {
             _progressValue = data.progress.clamp(0.0, 1.0);
-            if (data.result != null) {
-              _output = data.result!;
+            if (data.finalResult != null) {
+              _output = data.finalResult!;
             }
           });
         },
@@ -307,8 +308,8 @@ class _HomePageState extends State<HomePage> {
                   border: Border.symmetric(vertical: BorderSide(color: outlineColor, width: 2.0))
                 ),
                 alignment: Alignment.centerLeft,
-                child: AnimatedFractionallySizedBox(
-                  duration: const Duration(milliseconds: 20),
+                child: FractionallySizedBox(
+                  //duration: const Duration(milliseconds: 200),
                   widthFactor: _progressValue,
                   heightFactor: 1.0,
                   child: ColoredBox(color: theme.colorScheme.primary),
