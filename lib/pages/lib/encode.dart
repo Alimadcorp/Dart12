@@ -1,5 +1,33 @@
+import 'dart:isolate';
+import 'dart:convert';
 import 'map.dart';
 import 'util.dart';
+
+
+class Progress {
+  final double progress;
+  final String? result;
+
+  Progress({ required this.progress, this.result });
+}
+
+class EncodeTaskConfig {
+  final String input;
+  final int version;
+  final bool caseSensitive;
+  final int unmatched;
+  final SendPort replyTo;
+
+  EncodeTaskConfig({
+    required this.input, required this.version, required this.caseSensitive, required this.unmatched, required this.replyTo,
+  });
+}
+
+Future<void> startEncode(SendPort mainSendPort) async {
+  final ReceivePort receivePort = ReceivePort();
+  await Isolate.spawn(startEncode, ReceivePort().sendPort);
+  mainSendPort.send(receivePort.sendPort);
+}
 
 String encode(String input,
   int version, // 1, 2

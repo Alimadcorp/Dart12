@@ -1,14 +1,30 @@
 import 'dart:async';
-import 'package:dart12/pages/help.dart';
+import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:dart12/pages/help.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'settings.dart';
-import 'components/toolbar.dart';
-import 'components/output.dart';
 import 'lib/encode.dart';
 import 'lib/decode.dart';
+import 'components/toolbar.dart';
+import 'components/output.dart';
+
+Stream<Progress> runEncode() async* {
+  final ReceivePort receivePort = ReceivePort();
+  await Isolate.spawn(startEncode, receivePort.sendPort);
+  final SendPort? childSendPort; 
+
+  var msg = await receivePort;
+
+  await for (var message in receivePort) {
+    if (message is Progress) {
+      yield message;
+      if (message.progress >= 1.0) { receivePort.close(); break; }
+    }
+  }
+}
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -202,26 +218,44 @@ class _HomePageState extends State<HomePage> {
             children: [
               Expanded(
                 flex: 1,
-                child: TextField(
-                  controller: _inputController,
-                  maxLines: null,
-                  expands: true,
-                  textAlignVertical: TextAlignVertical.top,
-                  decoration: InputDecoration(
-                    labelText: "Input",
-                    alignLabelWithHint: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.zero,
-                      borderSide: BorderSide(color: outlineColor, width: 2.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: outlineColor, width: 2.0),
+                      left: BorderSide(color: outlineColor, width: 2.0),
+                      right: BorderSide(color: outlineColor, width: 2.0),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.zero,
-                      borderSide: BorderSide(color: outlineColor, width: 2.0),
-                    ),
-                    hintText: "Input",
-                    hintStyle: TextStyle(color: outlineColor.withAlpha(100)),
                   ),
+                  child: TextField(
+                    controller: _inputController,
+                    maxLines: null,
+                    expands: true,
+                    textAlignVertical: TextAlignVertical.top,
+                    decoration: InputDecoration(
+                      alignLabelWithHint: true,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none, 
+                      hintText: "Input",
+                      hintStyle: TextStyle(color: outlineColor.withAlpha(100)),
+                      contentPadding: const EdgeInsets.all(12.0), 
+                    ),
+                  ),
+                )
+
+              ),
+              Container(
+                height: 2,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border.symmetric(vertical: BorderSide(color: outlineColor, width: 2.0))
                 ),
+                alignment: Alignment.centerLeft,
+                child: FractionallySizedBox(
+                  widthFactor: 0.6,
+                  heightFactor: 1.0,
+                  child: ColoredBox(color: outlineColor),
+                )
               ),
               Expanded(
                 flex: 1,
