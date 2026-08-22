@@ -18,7 +18,7 @@ class DecodeConfig {
   });
 }
 
-String decodeIsolate(DecodeConfig config) {
+Future<String> decodeIsolate(DecodeConfig config) async {
   final String input;
   if (config.transferableInput != null) {
     final ByteBuffer buffer = config.transferableInput!.materialize();
@@ -29,10 +29,7 @@ String decodeIsolate(DecodeConfig config) {
   } else {
     input = "";
   }
-
-  // Runs the decode method and passes the port down for progress
-  final String result = decode(input, config.version, config.caseSensitive, config.replyTo);
-  
+  final String result = await decode(input, config.version, config.caseSensitive, config.replyTo);
   config.replyTo?.send(Progress(
     progress: 1.0, 
     finalResult: result,
@@ -41,24 +38,37 @@ String decodeIsolate(DecodeConfig config) {
   return result;
 }
 
-// Modified to accept an optional SendPort so it doesn't break when making recursive unicode calls
-String decode(String masterInput, int version, bool caseSensitive, [SendPort? progressPort]) {
-  
+Future<String> decode(String masterInput, int version, bool caseSensitive, [SendPort? progressPort]) async {
   final StringBuffer out = StringBuffer();
-  // only place where decompression takes place
   masterInput = masterInput.replaceAll('4', '11').replaceAll('5', '22').replaceAll('6', '33'); 
+  await Future.delayed(const Duration(milliseconds: 1));
+  final RegExp regex = RegExp(r'791(.*?)791');
+  final matches = regex.allMatches(masterInput).toList();
 
-  masterInput = masterInput.replaceAllMapped(RegExp(r'791(.*?)791'), (Match match) {
-    final String token = match.group(1) ?? "";
-    return u2a(decode(token, version, false)); // Recursive call gracefully skips progress reporting
-  }); 
+  if (matches.isNotEmpty) {
+    final StringBuffer processedInput = StringBuffer();
+    int lastEnd = 0;
+
+    // resolve all nested async decode calls in parallel
+    final decodedTokens = await Future.wait(
+      matches.map((m) => decode(m.group(1) ?? "", version, false)),
+    );
+
+    for (int i = 0; i < matches.length; i++) {
+      final match = matches[i];
+      processedInput.write(masterInput.substring(lastEnd, match.start));
+      processedInput.write(u2a(decodedTokens[i]));
+      lastEnd = match.end;
+    }
+    processedInput.write(masterInput.substring(lastEnd));
+    masterInput = processedInput.toString();
+  }
   
-  // if not case sensitive and version is 1, remove those characters...
-  if(!caseSensitive && version == 1) masterInput = masterInput.replaceAll('717', '').replaceAll('727', '').replaceAll('737', ''); 
+  if (!caseSensitive && version == 1) {
+    masterInput = masterInput.replaceAll('717', '').replaceAll('727', '').replaceAll('737', ''); 
+  }
 
-  // split into sentences
   final List<String> inputs = masterInput.split(RegExp(r'\r?\n|00')); 
-
   final StringBuffer acc = StringBuffer(); 
   int accL = 0; 
   bool _cL = false, _cW = false; 
@@ -73,6 +83,7 @@ String decode(String masterInput, int version, bool caseSensitive, [SendPort? pr
       if (currentProgress != lastProgress || sentence == total - 1) {
         progressPort.send(Progress(progress: currentProgress / 100.0));
         lastProgress = currentProgress;
+        await Future.delayed(const Duration(milliseconds: 1));
       }
     }
 
@@ -94,32 +105,32 @@ String decode(String masterInput, int version, bool caseSensitive, [SendPort? pr
 
       acc.write(char); accL++; // add the character to accumulator
 
-      if (codeUnit < 48 || codeUnit > 57) { // if its not a digit,
+      if (codeUnit < 48 || codeUnit > 57) { // if its not a digit
         out.write(acc.toString()); // add it as-is to output
-        acc.clear(); // clear the accumulator
+        acc.clear();
         accL = 0;
-        continue; // skip rest of loop
+        continue;
       }
 
-      if (char == "0") { // if there is a space
+      if (char == "0") { // space marker
         final String accStr = acc.toString();
         out.write(accStr.substring(0, accStr.length - 1));
-        out.write(' '); // write accumulator followed by a space to output
-        _cW = false; // no longer capital by word as word has ended
-        acc.clear(); // reset accumulator
+        out.write(' ');
+        _cW = false;
+        acc.clear();
         accL = 0;
-        continue; // skip rest of loop
+        continue;
       }
       
-      if(accL == 4) { // if accumulator has a length of 4
+      if (accL == 4) {
         final String accStr = acc.toString();
-        out.write(accStr[0]); // write the first character to output
+        out.write(accStr[0]);
         acc.clear();
-        acc.write(accStr.substring(1, 4)); // and then drop it
-        accL = 3; // update length, accumulator has a max length of 3
+        acc.write(accStr.substring(1, 4));
+        accL = 3;
       }
 
-      if (accL == 0) { continue; } // in some cases this might occur
+      if (accL == 0) { continue; }
 
       final String accStr = acc.toString();
       final int? nAcc = int.tryParse(accStr);
@@ -129,19 +140,16 @@ String decode(String masterInput, int version, bool caseSensitive, [SendPort? pr
         if (version == 1) {
           switch (nAcc) {
             case 717:
-              _cL = true; // capitalize next letter
-              // setting token to null skips adding to out and doesnt reset _cL
+              _cL = true;
               token = null; acc.clear(); accL = 0; break;
             case 727:
-              _cW = true; // still capital, but by word
+              _cW = true;
               token = null; acc.clear(); accL = 0; break;
             case 737:
-              token = null; // this is a repeated 737, we ignore it... quite a rare case
+              token = null;
               acc.clear(); accL = 0; break;
             case 373:
-              // added bracket support
-              _b = !_b; token = _b ? '(' : ')'; break; 
-              // do not clear accumulator as token is not null, hence the clear loop wont be skipped
+              _b = !_b; token = _b ? '(' : ')'; break;
             default: token = nAcc != null ? cipher(nAcc, version) : null;
           }
         } else if (version == 2) {
@@ -154,14 +162,12 @@ String decode(String masterInput, int version, bool caseSensitive, [SendPort? pr
           }
         } else {
           token = nAcc != null ? cipher(nAcc, version) : null;
-          // unreachable unless you do something stupid
-          // please dont do stupid things
         }
       } else {
-        if(nAcc == 373) {
+        if (nAcc == 373) {
           _b = !_b; token = _b ? '(' : ')';
         } else {
-          token = nAcc != null ? cipher(nAcc, version) : null; // these will be all upper...
+          token = nAcc != null ? cipher(nAcc, version) : null;
         }
       }
 
@@ -174,7 +180,7 @@ String decode(String masterInput, int version, bool caseSensitive, [SendPort? pr
       }
     }
 
-    out.write("\n"); // after each sentence write a line break
+    out.write("\n");
   }
 
   return out.toString();

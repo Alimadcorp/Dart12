@@ -25,7 +25,7 @@ class EncodeConfig {
   });
 }
 
-String encode(EncodeConfig config) {
+Future<String> encode(EncodeConfig config) async {
   final String input;
   final int version = config.version;
   final bool caseSensitive = config.caseSensitive;
@@ -71,6 +71,7 @@ String encode(EncodeConfig config) {
       if (currentProgress != lastProgress || i == total - 1) {
         progressPort.send(Progress(progress: currentProgress / 100.0));
         lastProgress = currentProgress;
+        await Future.delayed(const Duration(milliseconds: 1));
       }
     }
 
@@ -143,15 +144,19 @@ String encode(EncodeConfig config) {
 
   // The only point where compression takes place
   progressPort?.send(Progress(progress: 0.92)); // compression started
+  await Future.delayed(const Duration(milliseconds: 1));
   
   String compressed = out.toString();
   compressed = compressed.replaceAll('11', '4');
   progressPort?.send(Progress(progress: 0.94));
+  await Future.delayed(const Duration(milliseconds: 1));
   compressed = compressed.replaceAll('22', '5');
   progressPort?.send(Progress(progress: 0.96));
+  await Future.delayed(const Duration(milliseconds: 1));
   compressed = compressed.replaceAll('33', '6');
 
   progressPort?.send(Progress(progress: 0.98));
+  await Future.delayed(const Duration(milliseconds: 1));
 
   progressPort?.send(Progress(
     progress: 1.0, 

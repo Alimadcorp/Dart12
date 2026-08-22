@@ -21,6 +21,7 @@ class MyApp extends StatelessWidget {
           surface: Colors.white,
           onSurface: Colors.black,
         ),
+        i write code lmao lmao lmao lmao
       ),
       darkTheme: ThemeData(
         fontFamily: 'GeistMono',
