@@ -11,17 +11,31 @@ import 'lib/decode.dart';
 import 'components/toolbar.dart';
 import 'components/output.dart';
 
-Stream<Progress> runEncode() async* {
+Stream<Progress> startAsyncEncode({
+  required String input,
+  required int version,
+  required bool caseSensitive,
+  required int unmatched,
+}) async* {
   final ReceivePort receivePort = ReceivePort();
-  await Isolate.spawn(startEncode, receivePort.sendPort);
-  final SendPort? childSendPort; 
 
-  var msg = await receivePort;
+  final config = EncodeConfig(
+    input: input,
+    version: version,
+    caseSensitive: caseSensitive,
+    unmatched: unmatched,
+    replyTo: receivePort.sendPort,
+  );
 
-  await for (var message in receivePort) {
+  final Isolate isolate = await Isolate.spawn(encode, config);
+  await for (final dynamic message in receivePort) {
     if (message is Progress) {
       yield message;
-      if (message.progress >= 1.0) { receivePort.close(); break; }
+      if (message.progress >= 1.0) {
+        receivePort.close();
+        isolate.kill(priority: Isolate.immediate);
+        break;
+      }
     }
   }
 }
@@ -45,6 +59,9 @@ class _HomePageState extends State<HomePage> {
   bool _viewedHelp = false;
   bool _caseSensitivity = true;
   String _unmatchedChar = 'as_is';
+  StreamSubscription<Progress>? _encodingSubscription;
+  // our subsription when a stream is alive
+  double _progressValue = 0.0;
 
   static const String _keyViewedHelp = 'viewed_help';
   static const String _keyInput = 'saved_input';
@@ -96,28 +113,62 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _processText() async {
     final text = _inputController.text;
+    await _encodingSubscription?.cancel(); // pause previously running stuff
     if (text.isEmpty) {
-      if (mounted) setState(() => _output = "");
+      if (mounted) setState(() { _output = ""; _progressValue = 1.0; });
       return;
     }
 
-    try {
-      final result = _encryptMode
-          ? encode(
-              text,
-              _v1 ? 1 : 2,
-              _caseSensitivity,
-              _unmatchedChar == "as_is" ? 0 : (_unmatchedChar == "question_mark" ? 1 : 2),
-            )
-          : decode(text, _v1 ? 1 : 2, _caseSensitivity);
-      if (mounted && text == _inputController.text) {
-        setState(() => _output = result);
-      }
-    } catch (e) {
-      if (mounted && text == _inputController.text) {
-        setState(() {
-          _output = e.toString();
-        });
+    setState(() => _progressValue = 0.01);
+
+    if (_encryptMode) {
+      final int unmatchedInt = _unmatchedChar == "as_is" 
+          ? 0 
+          : (_unmatchedChar == "question_mark" ? 1 : 2);
+
+      final progressStream = startAsyncEncode(
+        input: text,
+        version: _v1 ? 1 : 2,
+        caseSensitive: _caseSensitivity,
+        unmatched: unmatchedInt,
+      );
+
+      _encodingSubscription = progressStream.listen(
+        (Progress data) {
+          if (!mounted || text != _inputController.text) return;
+          
+          setState(() {
+            _progressValue = data.progress.clamp(0.0, 1.0);
+            if (data.result != null) {
+              _output = data.result!;
+            }
+          });
+        },
+        onError: (error) {
+          if (!mounted) return;
+          setState(() {
+            _output = "Error: $error";
+            _progressValue = 1.0;
+          });
+        },
+      );
+    } 
+    else {
+      try {
+        final result = decode(text, _v1 ? 1 : 2, _caseSensitivity); 
+        if (mounted && text == _inputController.text) {
+          setState(() {
+            _output = result;
+            _progressValue = 1.0;
+          });
+        }
+      } catch (e) {
+        if (mounted && text == _inputController.text) {
+          setState(() {
+            _output = e.toString();
+            _progressValue = 1.0;
+          });
+        }
       }
     }
   }
@@ -195,6 +246,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _encodingSubscription?.cancel();
     _inputController.removeListener(_onTextChanged);
     _inputController.dispose();
     super.dispose();
@@ -251,16 +303,17 @@ class _HomePageState extends State<HomePage> {
                   border: Border.symmetric(vertical: BorderSide(color: outlineColor, width: 2.0))
                 ),
                 alignment: Alignment.centerLeft,
-                child: FractionallySizedBox(
-                  widthFactor: 0.6,
+                child: AnimatedFractionallySizedBox(
+                  duration: const Duration(milliseconds: 20),
+                  widthFactor: _progressValue,
                   heightFactor: 1.0,
-                  child: ColoredBox(color: outlineColor),
-                )
+                  child: ColoredBox(color: theme.colorScheme.primary),
+                ),
               ),
               Expanded(
                 flex: 1,
                 child: OutputDisplay(
-                  output: _output,
+                  output: _output, // output
                   encryptMode: _encryptMode,
                 ),
               ),

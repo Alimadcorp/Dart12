@@ -11,34 +11,32 @@ class Progress {
   Progress({ required this.progress, this.result });
 }
 
-class EncodeTaskConfig {
+class EncodeConfig {
   final String input;
-  final int version;
+  final int version; // 1, 2
   final bool caseSensitive;
-  final int unmatched;
-  final SendPort replyTo;
+  final int unmatched; // 0: as-is, 1: ?, 2: unicode
+  final SendPort? replyTo;
 
-  EncodeTaskConfig({
-    required this.input, required this.version, required this.caseSensitive, required this.unmatched, required this.replyTo,
+  EncodeConfig({
+    required this.input, required this.version, required this.caseSensitive, required this.unmatched, this.replyTo,
   });
 }
 
-Future<void> startEncode(SendPort mainSendPort) async {
-  final ReceivePort receivePort = ReceivePort();
-  await Isolate.spawn(startEncode, ReceivePort().sendPort);
-  mainSendPort.send(receivePort.sendPort);
-}
+String encode(EncodeConfig config) {
+  final String input = config.input;
+  final int version = config.version;
+  final bool caseSensitive = config.caseSensitive;
+  final int unmatched = config.unmatched;
+  final SendPort? progressPort = config.replyTo;
+  final int total = input.length;
 
-String encode(String input,
-  int version, // 1, 2
-  bool caseSensitive, int unmatched, // 0: as-is, 1: ?, 2: unicode
-) {
   final StringBuffer out = StringBuffer();
 
   void writeUnmatched(String ch) {
     out.write(switch (unmatched) {
       1 => '?',
-      2 => "791${encode(a2u(ch), version, false, 1)}791",
+      2 => "791${encode(EncodeConfig(input: a2u(ch), version: version, caseSensitive: false, unmatched: 1))}791",
       _ => ch
     });
   }
@@ -54,6 +52,9 @@ String encode(String input,
   // we do this so that we dont end up recalculating stuff
 
   for (int i = 0; i < input.length; i++) {
+    progressPort?.send(Progress(progress: i / total * 0.90)); // send progress
+    // max is 90%, 95 is when compression starts, 100 is when everything done
+
     final String ch = input[i];
     if (ch == '\n' || ch == '\r') { // marks end of a line
       out.write('00');
@@ -122,5 +123,9 @@ String encode(String input,
   }
 
   // The only point where compression takes place
-  return compress(out.toString());
+  progressPort?.send(Progress(progress: 0.95)); // compression started
+  final String compressed = compress(out.toString());
+
+  progressPort?.send(Progress(progress: 1.0, result: compressed));
+  return compressed;
 }
