@@ -1,36 +1,49 @@
 import 'dart:isolate';
 import 'dart:convert';
+import 'package:flutter/services.dart';
+
 import 'map.dart';
 import 'util.dart';
 
 
 class Progress {
   final double progress;
-  final String? result;
+  final TransferableTypedData? result;
 
   Progress({ required this.progress, this.result });
 }
 
 class EncodeConfig {
-  final String input;
+  final TransferableTypedData? transferableInput;
+  final String? input;
   final int version; // 1, 2
   final bool caseSensitive;
   final int unmatched; // 0: as-is, 1: ?, 2: unicode
   final SendPort? replyTo;
 
   EncodeConfig({
-    required this.input, required this.version, required this.caseSensitive, required this.unmatched, this.replyTo,
+    this.transferableInput, this.input, required this.version, required this.caseSensitive, required this.unmatched, this.replyTo,
   });
 }
 
 String encode(EncodeConfig config) {
-  final String input = config.input;
+  final String input;
   final int version = config.version;
   final bool caseSensitive = config.caseSensitive;
   final int unmatched = config.unmatched;
   final SendPort? progressPort = config.replyTo;
-  final int total = input.length;
 
+  if (config.transferableInput != null) {
+    final Uint8List raw = config.transferableInput!.materialize().asUint8List();
+    input = utf8.decode(raw);
+  } else if (config.input != null) {
+    input = config.input!;
+  } else {
+    input = "";
+  }
+
+
+  final int total = input.length;
   final StringBuffer out = StringBuffer();
 
   void writeUnmatched(String ch) {
@@ -126,6 +139,9 @@ String encode(EncodeConfig config) {
   progressPort?.send(Progress(progress: 0.95)); // compression started
   final String compressed = compress(out.toString());
 
-  progressPort?.send(Progress(progress: 1.0, result: compressed));
+  if (progressPort != null) {
+    final Uint8List outBytes = utf8.encode(compressed);
+    progressPort.send(Progress(progress: 1.0, result: TransferableTypedData.fromList([outBytes])));
+  }
   return compressed;
 }

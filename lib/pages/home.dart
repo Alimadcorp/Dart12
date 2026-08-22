@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,8 +20,11 @@ Stream<Progress> startAsyncEncode({
 }) async* {
   final ReceivePort receivePort = ReceivePort();
 
+  final Uint8List inputBytes = utf8.encode(input);
+  final TransferableTypedData transferable = TransferableTypedData.fromList([inputBytes]);
+
   final config = EncodeConfig(
-    input: input,
+    transferableInput: transferable,
     version: version,
     caseSensitive: caseSensitive,
     unmatched: unmatched,
@@ -100,7 +104,7 @@ class _HomePageState extends State<HomePage> {
   void _onTextChanged() {
     if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
     // add a 200 ms delay if length is greater than 100 to improve performance while typin
-    final int duration =  _inputController.text.length > 100 ? 200 : 0; 
+    final int duration = _inputController.text.length > 5000 ? 450 : (_inputController.text.length > 100 ? 200 : 0);
     _debounceTimer = Timer(Duration(milliseconds: duration), () {
       final currentText = _inputController.text;
       if (currentText != _lastProcessedText) {
