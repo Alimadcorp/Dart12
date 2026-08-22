@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:dart12/pages/help.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'help.dart';
 import 'settings.dart';
 import 'lib/encode.dart';
 import 'lib/decode.dart';
@@ -40,7 +40,7 @@ Stream<Progress> startAsyncEncode({
         yield message;
         
         if (message.progress >= 1.0) {
-          break; // Exit loop to trigger finally block
+          break;
         }
       }
     }
